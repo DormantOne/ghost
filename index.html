@@ -3,56 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost RPS - https://dormantone.github.io/ghost/</title>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <title>AnyDevice RPS - Computer vs Phone</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrious/dist/qrious.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #000;
-            color: #0f0;
             font-family: 'Courier New', monospace;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        h1 { text-align: center; margin-bottom: 10px; font-size: 24px; }
-        .url { text-align: center; font-size: 12px; opacity: 0.6; margin-bottom: 30px; }
-        
-        button {
-            background: #001100;
-            border: 2px solid #0f0;
+            background: #0a0a0a;
             color: #0f0;
-            padding: 15px;
-            margin: 5px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 16px;
-            width: 100%;
-            max-width: 300px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
         }
-        button:hover { background: #0f0; color: #000; }
-        button:disabled { opacity: 0.3; cursor: not-allowed; }
-        
-        .panel {
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: 2px solid #0f0;
+            background: transparent;
+            color: #0f0;
+            font-family: inherit;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #0f0;
+            color: #000;
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .section {
             border: 1px solid #0f0;
             padding: 20px;
-            margin: 20px auto;
-            max-width: 500px;
+            margin: 20px 0;
             display: none;
         }
-        .panel.active { display: block; }
-        
-        #qrcanvas {
+
+        .section.active {
+            display: block;
+        }
+
+        canvas {
             margin: 20px auto;
             display: block;
-            border: 10px solid white;
             background: white;
+            padding: 10px;
         }
-        
-        .code-display {
+
+        textarea {
+            width: 100%;
+            background: #000;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+
+        .code-box {
             background: #001100;
             border: 1px solid #0f0;
             padding: 15px;
@@ -62,380 +90,388 @@
             cursor: pointer;
             user-select: all;
         }
-        .code-display:hover { background: #002200; }
-        
-        textarea {
-            width: 100%;
-            background: #000;
-            border: 1px solid #0f0;
-            color: #0f0;
-            padding: 10px;
-            font-family: inherit;
-            margin: 10px 0;
-            min-height: 100px;
+
+        .code-box:hover {
+            background: #002200;
         }
-        
-        #game { max-width: 600px; margin: 0 auto; text-align: center; }
-        .choices { display: flex; justify-content: center; gap: 20px; margin: 40px 0; }
+
+        #game {
+            display: none;
+        }
+
+        .scores {
+            font-size: 32px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .choices {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
         .choice {
-            width: 100px;
-            height: 100px;
+            width: 80px;
+            height: 80px;
             border: 2px solid #0f0;
-            font-size: 50px;
+            font-size: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             background: rgba(0, 50, 0, 0.3);
         }
-        .choice:hover { transform: scale(1.1); background: rgba(0, 255, 0, 0.2); }
-        .choice.picked { background: #0f0; color: #000; transform: scale(1.2); }
-        .choice:disabled { opacity: 0.3; pointer-events: none; }
-        
-        .score { font-size: 36px; margin: 20px 0; display: flex; justify-content: space-around; }
-        #message { text-align: center; margin: 20px 0; font-size: 20px; height: 30px; }
-        #foe-choice { font-size: 60px; text-align: center; height: 80px; margin: 20px 0; opacity: 0.3; }
-        
-        .big-text { font-size: 14px; margin: 20px 0; color: #ff0; text-align: center; }
-        .error { color: #f00; border-color: #f00; }
-        .success { color: #0f0; background: rgba(0, 255, 0, 0.1); }
-        
-        video { width: 100%; max-width: 400px; border: 2px solid #0f0; display: block; margin: 10px auto; }
+
+        .choice:hover:not(.disabled) {
+            transform: scale(1.1);
+            background: rgba(0, 255, 0, 0.2);
+        }
+
+        .choice.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .choice.selected {
+            background: #0f0;
+            color: #000;
+            transform: scale(1.2);
+        }
+
+        #foe-move {
+            font-size: 60px;
+            height: 80px;
+            margin: 20px 0;
+            opacity: 0.3;
+        }
+
+        #message {
+            font-size: 20px;
+            margin: 20px 0;
+            height: 30px;
+        }
+
+        video {
+            width: 100%;
+            max-width: 400px;
+            border: 2px solid #0f0;
+            margin: 10px 0;
+        }
+
+        .instructions {
+            font-size: 12px;
+            color: #ff0;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
 
-<h1>◢ GHOST RPS ◣</h1>
-<div class="url">https://dormantone.github.io/ghost/</div>
+    <h1>◢ GHOST RPS ◣</h1>
+    <div class="subtitle">Computer vs Phone - Direct Connection</div>
 
-<div id="setup">
-    <p style="text-align: center; margin-bottom: 20px;">
-        <strong>Computer vs Phone</strong><br>
-        No installs. Direct connection.
-    </p>
-    
-    <button onclick="becomeHost()">1. CREATE GAME (Computer)</button>
-    <button onclick="becomeJoiner()">2. JOIN GAME (Phone)</button>
-    
-    <!-- HOST PANEL -->
-    <div id="host-panel" class="panel">
-        <div class="big-text">Scan with phone OR copy text:</div>
-        
-        <canvas id="qrcanvas"></canvas>
-        <div id="qr-fallback" style="display: none; color: #f00; text-align: center;">QR Failed - use text below</div>
-        
-        <div style="margin-top: 20px; font-size: 12px;">CLICK TO COPY:</div>
-        <div class="code-display" id="host-code" onclick="copyText(this)">Generating connection code...</div>
-        
-        <div style="margin-top: 30px; border-top: 1px solid #0f0; padding-top: 20px;">
-            <div class="big-text">Paste phone's response here:</div>
-            <textarea id="answer-receive" placeholder="Paste the response code from phone..."></textarea>
-            <button onclick="completeHost()">START GAME</button>
+    <div id="setup">
+        <button onclick="becomeHost()">1. CREATE GAME (Computer)</button>
+        <button onclick="becomeJoiner()">2. JOIN GAME (Phone)</button>
+
+        <!-- Host Section -->
+        <div id="host-section" class="section">
+            <div class="instructions">Scan with phone OR copy the code below:</div>
+            
+            <canvas id="host-qr"></canvas>
+            
+            <div class="instructions">If QR fails, copy this text and send to phone:</div>
+            <div class="code-box" id="host-code" onclick="copyText(this)">Generating...</div>
+            
+            <div style="margin-top: 30px; border-top: 1px solid #0f0; padding-top: 20px;">
+                <div class="instructions">Paste phone's response here:</div>
+                <textarea id="answer-input" rows="3" placeholder="Paste response code..."></textarea>
+                <button onclick="completeConnection()">START GAME</button>
+            </div>
+        </div>
+
+        <!-- Joiner Section -->
+        <div id="joiner-section" class="section">
+            <button onclick="startCamera()">Scan QR Code</button>
+            <button onclick="showManual()">Enter Code Manually</button>
+            
+            <div id="camera-area" style="display: none;">
+                <video id="video" playsinline></video>
+                <canvas id="scan-canvas" style="display: none;"></canvas>
+                <div class="instructions">Point camera at computer screen</div>
+            </div>
+            
+            <div id="manual-area" style="display: none; margin-top: 20px;">
+                <div class="instructions">Paste computer's code:</div>
+                <textarea id="offer-input" rows="3" placeholder="Paste here..."></textarea>
+                <button onclick="processOffer()">CONNECT</button>
+            </div>
+            
+            <div id="response-area" style="display: none; margin-top: 30px; border-top: 1px solid #0f0; padding-top: 20px;">
+                <div class="instructions">Show this QR to computer:</div>
+                <canvas id="response-qr"></canvas>
+                <div class="instructions">Or copy this text:</div>
+                <div class="code-box" id="response-code" onclick="copyText(this)"></div>
+            </div>
         </div>
     </div>
-    
-    <!-- JOINER PANEL -->
-    <div id="joiner-panel" class="panel">
-        <button onclick="startCamera()">Scan QR Code</button>
-        <button onclick="showManual()">Type Code Instead</button>
-        
-        <div id="camera-section" style="display: none;">
-            <video id="video" playsinline></video>
-            <canvas id="scan-canvas" style="display: none;"></canvas>
-            <div style="text-align: center; font-size: 12px;">Point camera at computer screen</div>
+
+    <!-- Game Section -->
+    <div id="game">
+        <div class="scores">
+            <div>YOU: <span id="my-score">0</span></div>
+            <div>FOE: <span id="foe-score">0</span></div>
         </div>
         
-        <div id="manual-section" style="display: none; margin-top: 20px;">
-            <div class="big-text">Paste computer's code:</div>
-            <textarea id="offer-input" placeholder="Paste here..."></textarea>
-            <button onclick="processOffer()">CONNECT</button>
+        <div id="message">Choose your weapon!</div>
+        
+        <div class="choices">
+            <div class="choice" id="rock" onclick="play('rock')">✊</div>
+            <div class="choice" id="paper" onclick="play('paper')">✋</div>
+            <div class="choice" id="scissors" onclick="play('scissors')">✌</div>
         </div>
         
-        <div id="response-section" style="display: none; margin-top: 30px; border-top: 1px solid #0f0; padding-top: 20px;">
-            <div class="big-text">Show this to computer:</div>
-            <canvas id="response-qr"></canvas>
-            <div class="code-display" id="response-code" onclick="copyText(this)"></div>
-        </div>
+        <div id="foe-move">?</div>
+        
+        <button onclick="location.reload()" style="margin-top: 30px;">New Game</button>
     </div>
-</div>
 
-<!-- GAME UI -->
-<div id="game" style="display: none;">
-    <div class="score">
-        <div>YOU: <span id="me">0</span></div>
-        <div>FOE: <span id="foe">0</span></div>
-    </div>
-    <div id="message">Choose your weapon!</div>
-    
-    <div class="choices" id="buttons">
-        <button class="choice" onclick="shoot('rock')">✊</button>
-        <button class="choice" onclick="shoot('paper')">✋</button>
-        <button class="choice" onclick="shoot('scissors')">✌</button>
-    </div>
-    
-    <div id="foe-choice">?</div>
-    
-    <button onclick="location.reload()" style="margin-top: 40px; font-size: 12px;">New Game</button>
-</div>
+    <script>
+        let pc = null;
+        let dc = null;
+        let isHost = false;
+        let myChoice = null;
+        let foeChoice = null;
+        let myScore = 0;
+        let foeScore = 0;
+        let roundActive = false;
 
-<script>
-let pc = null;
-let channel = null;
-let isHost = false;
-let myMove = null;
-let foeMove = null;
-let myScore = 0;
-let foeScore = 0;
-
-// HOST
-async function becomeHost() {
-    isHost = true;
-    document.getElementById('host-panel').classList.add('active');
-    updateStatus('Creating secure channel...');
-    
-    try {
-        pc = new RTCPeerConnection({
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        });
-        
-        channel = pc.createDataChannel('ghost');
-        setupDataChannel(channel);
-        
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        
-        // Wait for ICE or timeout
-        setTimeout(() => {
-            const code = btoa(JSON.stringify(pc.localDescription));
-            showHostCode(code);
-        }, 1000);
-        
-    } catch(e) {
-        alert('Error: ' + e.message);
-        console.error(e);
-    }
-}
-
-function showHostCode(code) {
-    document.getElementById('host-code').textContent = code;
-    updateStatus('Code ready! Scan or copy.');
-    
-    // Try to make QR
-    try {
-        const canvas = document.getElementById('qrcanvas');
-        QRCode.toCanvas(canvas, code, { width: 300, margin: 2 }, function(error) {
-            if (error) {
-                console.error('QR Error:', error);
-                document.getElementById('qr-fallback').style.display = 'block';
-                canvas.style.display = 'none';
-            } else {
-                updateStatus('QR Code ready!');
+        // Use QRious exactly like your working example
+        function generateQR(canvasId, text) {
+            try {
+                var qr = new QRious({
+                    element: document.getElementById(canvasId),
+                    value: text,
+                    size: 250
+                });
+                return true;
+            } catch(e) {
+                console.error('QR Error:', e);
+                return false;
             }
-        });
-    } catch(e) {
-        document.getElementById('qr-fallback').style.display = 'block';
-        console.error('QR Exception:', e);
-    }
-}
-
-function completeHost() {
-    const answer = document.getElementById('answer-receive').value.trim();
-    if (!answer) return alert('Paste the response from phone!');
-    
-    try {
-        const desc = JSON.parse(atob(answer));
-        pc.setRemoteDescription(desc);
-        startGame();
-    } catch(e) {
-        alert('Invalid code: ' + e.message);
-    }
-}
-
-// JOINER
-function becomeJoiner() {
-    document.getElementById('joiner-panel').classList.add('active');
-}
-
-function showManual() {
-    document.getElementById('manual-section').style.display = 'block';
-    document.getElementById('camera-section').style.display = 'none';
-}
-
-async function startCamera() {
-    document.getElementById('camera-section').style.display = 'block';
-    document.getElementById('manual-section').style.display = 'none';
-    
-    const video = document.getElementById('video');
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        video.srcObject = stream;
-        video.play();
-        scanFrame();
-    } catch(e) {
-        alert('Camera failed. Use manual input.');
-        showManual();
-    }
-}
-
-function scanFrame() {
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('scan-canvas');
-    const ctx = canvas.getContext('2d');
-    
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imgData.data, imgData.width, imgData.height);
-        
-        if (code) {
-            handleOfferData(code.data);
-            return;
         }
-    }
-    requestAnimationFrame(scanFrame);
-}
 
-function processOffer() {
-    const data = document.getElementById('offer-input').value.trim();
-    if (data) handleOfferData(data);
-}
+        // HOST FUNCTIONS
+        async function becomeHost() {
+            isHost = true;
+            document.getElementById('host-section').classList.add('active');
+            
+            pc = new RTCPeerConnection({
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            });
 
-async function handleOfferData(offerStr) {
-    try {
-        const offer = JSON.parse(atob(offerStr));
-        pc = new RTCPeerConnection({
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        });
-        
-        pc.ondatachannel = (e) => {
-            channel = e.channel;
-            setupDataChannel(channel);
-        };
-        
-        await pc.setRemoteDescription(offer);
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        
-        setTimeout(() => {
-            const code = btoa(JSON.stringify(pc.localDescription));
-            showResponse(code);
-        }, 1000);
-        
-    } catch(e) {
-        alert('Error: ' + e.message);
-    }
-}
+            dc = pc.createDataChannel('game');
+            setupChannel(dc);
 
-function showResponse(code) {
-    document.getElementById('response-section').style.display = 'block';
-    document.getElementById('response-code').textContent = code;
-    
-    try {
-        QRCode.toCanvas(document.getElementById('response-qr'), code, { width: 250 });
-    } catch(e) {
-        console.log('QR skipped');
-    }
-    
-    updateStatus('Show this code to computer!');
-}
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
 
-// GAME LOGIC
-function setupDataChannel(dc) {
-    dc.onopen = () => {
-        updateStatus('CONNECTED!');
-        setTimeout(startGame, 500);
-    };
-    dc.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        if (data.move) {
-            foeMove = data.move;
-            resolveRound();
+            // Wait for ICE gathering
+            setTimeout(() => {
+                const code = btoa(JSON.stringify(pc.localDescription));
+                document.getElementById('host-code').textContent = code;
+                generateQR('host-qr', code);
+            }, 1000);
         }
-    };
-}
 
-function startGame() {
-    document.getElementById('setup').style.display = 'none';
-    document.getElementById('game').style.display = 'block';
-}
+        function completeConnection() {
+            const answer = document.getElementById('answer-input').value.trim();
+            if (!answer) return alert('Paste the response from phone!');
+            
+            try {
+                const desc = JSON.parse(atob(answer));
+                pc.setRemoteDescription(desc);
+                startGame();
+            } catch(e) {
+                alert('Invalid code');
+            }
+        }
 
-function shoot(move) {
-    if (myMove) return;
-    myMove = move;
-    
-    // Visuals
-    const buttons = document.querySelectorAll('.choice');
-    buttons.forEach(b => b.disabled = true);
-    event.target.classList.add('picked');
-    document.getElementById('message').textContent = 'Waiting for foe...';
-    
-    // Send
-    if (channel && channel.readyState === 'open') {
-        channel.send(JSON.stringify({ move: move }));
-    }
-    
-    if (foeMove) resolveRound();
-}
+        // JOINER FUNCTIONS
+        function becomeJoiner() {
+            document.getElementById('joiner-section').classList.add('active');
+        }
 
-function resolveRound() {
-    if (!myMove || !foeMove) return;
-    
-    const msg = document.getElementById('message');
-    const foeDisplay = document.getElementById('foe-choice');
-    
-    foeDisplay.textContent = foeMove === 'rock' ? '✊' : foeMove === 'paper' ? '✋' : '✌';
-    foeDisplay.style.opacity = '1';
-    
-    // Determine winner
-    if (myMove === foeMove) {
-        msg.textContent = 'DRAW!';
-        msg.style.color = '#ff0';
-    } else if (
-        (myMove === 'rock' && foeMove === 'scissors') ||
-        (myMove === 'paper' && foeMove === 'rock') ||
-        (myMove === 'scissors' && foeMove === 'paper')
-    ) {
-        myScore++;
-        msg.textContent = 'YOU WIN!';
-        msg.style.color = '#0f0';
-    } else {
-        foeScore++;
-        msg.textContent = 'YOU LOSE!';
-        msg.style.color = '#f00';
-    }
-    
-    document.getElementById('me').textContent = myScore;
-    document.getElementById('foe').textContent = foeScore;
-    
-    // Reset after 2 seconds
-    setTimeout(() => {
-        myMove = null;
-        foeMove = null;
-        document.querySelectorAll('.choice').forEach(b => {
-            b.disabled = false;
-            b.classList.remove('picked');
-        });
-        foeDisplay.textContent = '?';
-        foeDisplay.style.opacity = '0.3';
-        msg.textContent = 'Choose!';
-        msg.style.color = '#0f0';
-    }, 2000);
-}
+        function showManual() {
+            document.getElementById('manual-area').style.display = 'block';
+            document.getElementById('camera-area').style.display = 'none';
+        }
 
-function copyText(el) {
-    navigator.clipboard.writeText(el.textContent).then(() => {
-        const old = el.textContent;
-        el.textContent = 'COPIED!';
-        setTimeout(() => el.textContent = old, 1000);
-    });
-}
+        async function startCamera() {
+            document.getElementById('camera-area').style.display = 'block';
+            document.getElementById('manual-area').style.display = 'none';
+            
+            const video = document.getElementById('video');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                video.srcObject = stream;
+                video.play();
+                scanLoop();
+            } catch(e) {
+                alert('Camera failed. Use manual input.');
+                showManual();
+            }
+        }
 
-function updateStatus(txt) {
-    console.log(txt);
-}
-</script>
+        function scanLoop() {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('scan-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                
+                if (code) {
+                    handleOffer(code.data);
+                    return;
+                }
+            }
+            requestAnimationFrame(scanLoop);
+        }
 
+        function processOffer() {
+            const data = document.getElementById('offer-input').value.trim();
+            if (data) handleOffer(data);
+        }
+
+        async function handleOffer(offerStr) {
+            try {
+                const offer = JSON.parse(atob(offerStr));
+                pc = new RTCPeerConnection({
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                });
+                
+                pc.ondatachannel = (e) => {
+                    dc = e.channel;
+                    setupChannel(dc);
+                };
+                
+                await pc.setRemoteDescription(offer);
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                
+                setTimeout(() => {
+                    const code = btoa(JSON.stringify(pc.localDescription));
+                    document.getElementById('response-code').textContent = code;
+                    generateQR('response-qr', code);
+                    document.getElementById('response-area').style.display = 'block';
+                    
+                    // Stop camera
+                    const video = document.getElementById('video');
+                    if (video.srcObject) {
+                        video.srcObject.getTracks().forEach(t => t.stop());
+                    }
+                }, 1000);
+                
+            } catch(e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        // GAME FUNCTIONS
+        function setupChannel(channel) {
+            channel.onopen = () => {
+                console.log('Channel open!');
+                if (isHost) startGame();
+            };
+            channel.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.move) {
+                    foeChoice = data.move;
+                    resolveRound();
+                }
+            };
+        }
+
+        function startGame() {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('game').style.display = 'block';
+        }
+
+        function play(move) {
+            if (roundActive || !dc || dc.readyState !== 'open') return;
+            
+            roundActive = true;
+            myChoice = move;
+            
+            document.querySelectorAll('.choice').forEach(c => c.classList.add('disabled'));
+            document.getElementById(move).classList.remove('disabled');
+            document.getElementById(move).classList.add('selected');
+            document.getElementById('message').textContent = 'Waiting...';
+            
+            dc.send(JSON.stringify({ move: move }));
+            
+            if (foeChoice) resolveRound();
+        }
+
+        function resolveRound() {
+            if (!myChoice || !foeChoice) return;
+            
+            const msg = document.getElementById('message');
+            const foeDisplay = document.getElementById('foe-move');
+            
+            foeDisplay.textContent = foeChoice === 'rock' ? '✊' : foeChoice === 'paper' ? '✋' : '✌';
+            foeDisplay.style.opacity = '1';
+            
+            if (myChoice === foeChoice) {
+                msg.textContent = 'DRAW!';
+            } else if (
+                (myChoice === 'rock' && foeChoice === 'scissors') ||
+                (myChoice === 'paper' && foeChoice === 'rock') ||
+                (myChoice === 'scissors' && foeChoice === 'paper')
+            ) {
+                myScore++;
+                msg.textContent = 'YOU WIN!';
+                msg.style.color = '#0f0';
+            } else {
+                foeScore++;
+                msg.textContent = 'YOU LOSE!';
+                msg.style.color = '#f00';
+            }
+            
+            document.getElementById('my-score').textContent = myScore;
+            document.getElementById('foe-score').textContent = foeScore;
+            
+            setTimeout(() => {
+                myChoice = null;
+                foeChoice = null;
+                roundActive = false;
+                document.querySelectorAll('.choice').forEach(c => {
+                    c.classList.remove('disabled', 'selected');
+                });
+                foeDisplay.textContent = '?';
+                foeDisplay.style.opacity = '0.3';
+                msg.textContent = 'Choose!';
+                msg.style.color = '#0f0';
+            }, 2500);
+        }
+
+        function copyText(el) {
+            navigator.clipboard.writeText(el.textContent).then(() => {
+                const original = el.textContent;
+                el.textContent = 'COPIED!';
+                setTimeout(() => el.textContent = original, 1000);
+            });
+        }
+    </script>
 </body>
 </html>
