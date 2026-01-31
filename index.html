@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Tic Tac Toe - Heuristic AI</title>
+    <title>Ghost Tic Tac Toe - Fixed</title>
     <script src="https://cdn.jsdelivr.net/npm/qrious/dist/qrious.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        
         body {
             font-family: 'Courier New', monospace;
             background: #050505;
@@ -16,20 +15,8 @@
             text-align: center;
             padding: 10px;
         }
-        
-        h1 { 
-            text-shadow: 0 0 15px #0f0; 
-            margin-bottom: 5px;
-            font-size: 22px;
-        }
-        
-        .sub { 
-            color: #666; 
-            font-size: 11px; 
-            margin-bottom: 20px;
-            letter-spacing: 2px;
-        }
-        
+        h1 { text-shadow: 0 0 15px #0f0; margin-bottom: 5px; font-size: 22px; }
+        .sub { color: #666; font-size: 11px; margin-bottom: 20px; }
         button {
             background: transparent;
             border: 2px solid #0f0;
@@ -40,24 +27,10 @@
             cursor: pointer;
             margin: 5px;
             text-transform: uppercase;
-            transition: all 0.3s;
         }
-        
-        button:hover:not(:disabled) {
-            background: #0f0;
-            color: #000;
-            box-shadow: 0 0 20px #0f0;
-        }
-        
-        button:disabled {
-            opacity: 0.3;
-            border-color: #333;
-            color: #333;
-            cursor: not-allowed;
-        }
-        
+        button:hover:not(:disabled) { background: #0f0; color: #000; }
+        button:disabled { opacity: 0.3; border-color: #333; cursor: not-allowed; }
         .btn-ai { border-color: #0ff; color: #0ff; }
-        .btn-ai:hover { background: #0ff; box-shadow: 0 0 20px #0ff; }
         
         canvas { margin: 15px auto; display: block; background: white; padding: 8px; }
         
@@ -69,7 +42,6 @@
             display: none;
             background: rgba(0, 20, 0, 0.3);
         }
-        
         .panel.active { display: block; }
         
         .code-display {
@@ -79,7 +51,6 @@
             text-shadow: 0 0 20px #ff0;
             margin: 15px 0;
             font-weight: bold;
-            font-family: 'Courier New', monospace;
         }
         
         input[type="text"] {
@@ -95,7 +66,6 @@
             font-family: inherit;
         }
         
-        /* Tic Tac Toe Board */
         #game-board {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -116,27 +86,13 @@
             font-size: 40px;
             cursor: pointer;
             background: rgba(0, 10, 0, 0.8);
-            transition: all 0.2s;
             min-height: 80px;
         }
-        
-        .cell:hover:not(.taken) {
-            background: rgba(0, 255, 0, 0.2);
-            box-shadow: inset 0 0 20px rgba(0, 255, 0, 0.3);
-        }
-        
-        .cell.taken {
-            cursor: not-allowed;
-        }
-        
+        .cell:hover:not(.taken) { background: rgba(0, 255, 0, 0.2); }
+        .cell.taken { cursor: not-allowed; }
         .cell.x { color: #0f0; text-shadow: 0 0 20px #0f0; }
         .cell.o { color: #f0f; text-shadow: 0 0 20px #f0f; }
-        
-        .cell.winning {
-            background: rgba(255, 255, 0, 0.3);
-            border-color: #ff0;
-            box-shadow: 0 0 30px #ff0;
-        }
+        .cell.winning { background: rgba(255, 255, 0, 0.3); border-color: #ff0; }
         
         #status {
             font-size: 18px;
@@ -145,32 +101,28 @@
             color: #0ff;
         }
         
-        .score-board {
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-            margin: 15px 0;
-            font-size: 14px;
-        }
-        
-        .score { opacity: 0.7; }
-        .score.active { opacity: 1; color: #ff0; }
-        
-        .thinking {
-            animation: pulse 1s infinite;
-            color: #0ff;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-        
-        .mode-select {
-            margin: 20px 0;
+        .connection-status {
+            font-size: 12px;
+            color: #ff0;
+            margin: 10px 0;
+            padding: 5px;
+            border: 1px dashed #ff0;
+            display: inline-block;
         }
         
         #game-area { display: none; max-width: 500px; margin: 0 auto; }
+        
+        .waiting-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 100;
+        }
+        .waiting-overlay.active { display: flex; }
         
         .log {
             font-size: 10px;
@@ -178,64 +130,50 @@
             margin-top: 15px;
             border-top: 1px solid #003300;
             padding-top: 10px;
-            max-height: 100px;
+            max-height: 80px;
             overflow-y: auto;
-        }
-        
-        .ai-indicator {
-            font-size: 11px;
-            color: #0ff;
-            margin-top: 5px;
         }
     </style>
 </head>
 <body>
 
     <h1>◢ GHOST TAC TOE ◣</h1>
-    <div class="sub">Heuristic AI // Bluetooth // 2-Player</div>
+    <div class="sub">Heuristic AI // 2-Player // Bluetooth</div>
 
-    <!-- Initial QR Step -->
+    <!-- Entry -->
     <div id="entry-point">
         <p style="margin-bottom: 15px;">Scan to open on phone:</p>
         <canvas id="url-qr"></canvas>
-        <p style="color: #666; font-size: 11px;">Or visit: <span id="current-url"></span></p>
+        <p style="color: #666; font-size: 11px;"><span id="current-url"></span></p>
         
-        <div class="mode-select">
-            <p style="margin-bottom: 10px;">Select Mode:</p>
+        <div style="margin-top: 20px;">
             <button onclick="startSolo()">⚡ Solo vs AI</button>
-            <button onclick="showHostPanel()">👥 Host Game</button>
-            <button onclick="showJoinPanel()">🔍 Join Game</button>
+            <button onclick="initHost()">👥 Host Game</button>
+            <button onclick="showJoin()">🔍 Join Game</button>
         </div>
     </div>
 
-    <!-- Host Panel -->
-    <div id="host-panel" class="panel">
-        <h3>Your Game Code</h3>
+    <!-- Host Waiting Room -->
+    <div id="host-wait" class="panel">
+        <h3>Game Code</h3>
         <div class="code-display" id="host-code">----</div>
-        <p style="font-size: 12px; color: #888;">Tell opponent this code</p>
-        <p style="font-size: 11px; margin-top: 15px;">Waiting for connection...</p>
-        <button class="btn-ai" onclick="startLocalGame(true)">Play as X (Start)</button>
+        <div class="connection-status">Tell opponent this code!<br>Game starts when they connect...</div>
+        <button onclick="cancelGame()">Cancel</button>
     </div>
 
-    <!-- Join Panel -->
+    <!-- Join Room -->
     <div id="join-panel" class="panel">
-        <h3>Enter Game Code</h3>
+        <h3>Enter Code</h3>
         <input type="text" id="join-code" maxlength="4" placeholder="ABCD">
         <br><br>
-        <button onclick="joinByCode()">Connect</button>
-        <button class="btn-ai" onclick="startLocalGame(false)">Or: Play Solo (O vs AI)</button>
+        <button onclick="joinGame()">Connect</button>
+        <button onclick="cancelGame()" style="border-color: #666;">Back</button>
     </div>
 
     <!-- Game Area -->
     <div id="game-area">
-        <div class="score-board">
-            <div id="score-x" class="score active">X (You): <span>0</span></div>
-            <div id="score-draw">Draws: <span>0</span></div>
-            <div id="score-o" class="score">O (Foe): <span>0</span></div>
-        </div>
-        
-        <div id="status">Your turn</div>
-        <div class="ai-indicator" id="ai-status" style="display: none;">AI is thinking...</div>
+        <div id="status">Setting up...</div>
+        <div style="font-size: 11px; color: #888; margin-bottom: 10px;" id="mode-indicator"></div>
         
         <div id="game-board">
             <div class="cell" data-index="0" onclick="makeMove(0)"></div>
@@ -249,14 +187,14 @@
             <div class="cell" data-index="8" onclick="makeMove(8)"></div>
         </div>
         
-        <button onclick="resetGame()">New Round</button>
+        <button onclick="resetGame()">New Game</button>
         <button onclick="location.reload()" style="border-color: #666; color: #666;">Exit</button>
         
         <div class="log" id="game-log"></div>
     </div>
 
     <script>
-        // Generate URL QR on load
+        // Generate QR
         const currentUrl = window.location.href.split('#')[0];
         document.getElementById('current-url').textContent = currentUrl;
         new QRious({
@@ -268,328 +206,281 @@
         // Game State
         let board = ['', '', '', '', '', '', '', '', ''];
         let currentPlayer = 'X';
-        let gameActive = true;
-        let mySymbol = 'X';
-        let foeSymbol = 'O';
-        let scores = { x: 0, o: 0, draw: 0 };
-        let gameCode = '';
+        let gameActive = false;
+        let mySymbol = null;
         let isAI = false;
         let isHost = false;
-        let aiDifficulty = 'expert'; // 'easy', 'medium', 'expert'
-
-        // Connection Setup (localStorage polling)
-        function generateCode() {
-            return Math.random().toString(36).substring(2, 6).toUpperCase();
-        }
+        let gameCode = null;
+        let opponentConnected = false;
 
         function log(msg) {
-            const logEl = document.getElementById('game-log');
-            if (logEl) {
-                logEl.innerHTML += '> ' + msg + '<br>';
-                logEl.scrollTop = logEl.scrollHeight;
+            const el = document.getElementById('game-log');
+            if (el) {
+                el.innerHTML += '> ' + msg + '<br>';
+                el.scrollTop = el.scrollHeight;
             }
             console.log(msg);
         }
 
-        // Mode Selection
+        function generateCode() {
+            return Math.random().toString(36).substring(2, 6).toUpperCase();
+        }
+
+        // SOLO MODE
         function startSolo() {
             isAI = true;
-            mySymbol = 'X';
-            foeSymbol = 'O';
-            document.getElementById('entry-point').style.display = 'none';
-            document.getElementById('game-area').style.display = 'block';
-            updateStatus('You are X. AI is O.');
-            log('Solo mode: You vs Heuristic AI');
-        }
-
-        function startLocalGame(asX) {
-            isAI = true;
-            mySymbol = asX ? 'X' : 'O';
-            foeSymbol = asX ? 'O' : 'X';
-            document.getElementById('host-panel').classList.remove('active');
-            document.getElementById('join-panel').classList.remove('active');
-            document.getElementById('entry-point').style.display = 'none';
-            document.getElementById('game-area').style.display = 'block';
-            updateStatus('You are ' + mySymbol + '. AI is ' + foeSymbol);
-            log('Solo mode: ' + mySymbol + ' vs AI');
-            
-            if (!asX) {
-                // AI goes first as X
-                setTimeout(makeAIMove, 500);
-            }
-        }
-
-        function showHostPanel() {
-            gameCode = generateCode();
-            document.getElementById('host-code').textContent = gameCode;
-            document.getElementById('host-panel').classList.add('active');
-            document.getElementById('entry-point').style.display = 'none';
-            isHost = true;
-            mySymbol = 'X';
-            foeSymbol = 'O';
-            setupStorageListener();
-            log('Hosting game: ' + gameCode);
-        }
-
-        function showJoinPanel() {
-            document.getElementById('join-panel').classList.add('active');
-            document.getElementById('entry-point').style.display = 'none';
             isHost = false;
-            mySymbol = 'O';
-            foeSymbol = 'X';
-        }
-
-        function joinByCode() {
-            const code = document.getElementById('join-code').value.toUpperCase();
-            if (code.length !== 4) return alert('Enter 4 letters!');
-            gameCode = code;
-            document.getElementById('join-panel').classList.remove('active');
+            mySymbol = 'X';
+            gameActive = true;
+            document.getElementById('entry-point').style.display = 'none';
             document.getElementById('game-area').style.display = 'block';
-            setupStorageListener();
-            updateStatus('Waiting for host...');
-            log('Joined game: ' + gameCode);
+            document.getElementById('mode-indicator').textContent = 'Mode: Solo vs AI (You are X)';
+            updateStatus('Your turn (X)');
+            log('Solo mode started. You are X, AI is O.');
         }
 
-        function setupStorageListener() {
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'ttt-move-' + gameCode) {
-                    const data = JSON.parse(e.newValue);
-                    if (data.symbol !== mySymbol) {
-                        receiveMove(data.index, data.symbol);
-                    }
+        // HOST MODE
+        function initHost() {
+            isHost = true;
+            isAI = false;
+            mySymbol = 'X';
+            gameCode = generateCode();
+            
+            document.getElementById('entry-point').style.display = 'none';
+            document.getElementById('host-wait').classList.add('active');
+            document.getElementById('host-code').textContent = gameCode;
+            
+            log('Hosting game: ' + gameCode);
+            
+            // Listen for joiner
+            window.addEventListener('storage', function waitForJoin(e) {
+                if (e.key === 'ttt-join-' + gameCode) {
+                    window.removeEventListener('storage', waitForJoin);
+                    opponentConnected = true;
+                    log('Opponent joined! Starting...');
+                    document.getElementById('host-wait').classList.remove('active');
+                    startTwoPlayerGame();
                 }
             });
         }
 
-        function broadcastMove(index, symbol) {
-            if (!isAI && gameCode) {
-                localStorage.setItem('ttt-move-' + gameCode, JSON.stringify({
-                    index: index,
-                    symbol: symbol,
-                    timestamp: Date.now()
-                }));
-            }
+        // JOIN MODE
+        function showJoin() {
+            document.getElementById('entry-point').style.display = 'none';
+            document.getElementById('join-panel').classList.add('active');
         }
 
-        // Game Logic
-        function makeMove(index) {
-            if (!gameActive || board[index] !== '') return;
-            if (currentPlayer !== mySymbol && !isAI) return; // Not your turn in 2P
-            
-            executeMove(index, mySymbol);
-            broadcastMove(index, mySymbol);
-            
-            if (gameActive && isAI) {
-                document.getElementById('ai-status').style.display = 'block';
-                document.getElementById('ai-status').classList.add('thinking');
-                setTimeout(makeAIMove, 600);
-            }
-        }
-
-        function receiveMove(index, symbol) {
-            if (!gameActive || board[index] !== '') return;
-            executeMove(index, symbol);
-        }
-
-        function executeMove(index, symbol) {
-            board[index] = symbol;
-            const cell = document.querySelector(`.cell[data-index="${index}"]`);
-            cell.textContent = symbol;
-            cell.classList.add('taken', symbol.toLowerCase());
-            
-            log(symbol + ' plays position ' + (index + 1));
-            
-            if (checkWin(symbol)) {
-                endGame(symbol + ' wins!', symbol);
+        function joinGame() {
+            const code = document.getElementById('join-code').value.toUpperCase();
+            if (code.length !== 4) {
+                alert('Enter 4-letter code!');
                 return;
             }
             
-            if (board.every(cell => cell !== '')) {
-                endGame('Draw!', null);
-                return;
+            gameCode = code;
+            isHost = false;
+            isAI = false;
+            mySymbol = 'O';
+            
+            // Notify host
+            localStorage.setItem('ttt-join-' + gameCode, JSON.stringify({
+                timestamp: Date.now(),
+                msg: 'joined'
+            }));
+            
+            document.getElementById('join-panel').classList.remove('active');
+            startTwoPlayerGame();
+            log('Joined game: ' + gameCode + ' as O');
+        }
+
+        function startTwoPlayerGame() {
+            gameActive = true;
+            document.getElementById('game-area').style.display = 'block';
+            document.getElementById('mode-indicator').textContent = 
+                'Mode: 2-Player | Code: ' + gameCode + ' | You are ' + mySymbol;
+            
+            // X goes first
+            if (mySymbol === 'X') {
+                updateStatus('Your turn (X)');
+            } else {
+                updateStatus('Waiting for X...');
             }
             
-            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-            updateTurnStatus();
+            // Setup move listener
+            window.addEventListener('storage', handleRemoteMove);
         }
 
-        function updateTurnStatus() {
-            const isMyTurn = currentPlayer === mySymbol;
-            updateStatus(isMyTurn ? (isAI ? 'Your turn (AI is thinking...)' : 'Your turn') : 
-                        (isAI ? 'AI is thinking...' : 'Opponent\'s turn'));
-            
-            document.getElementById('score-x').classList.toggle('active', currentPlayer === 'X');
-            document.getElementById('score-o').classList.toggle('active', currentPlayer === 'O');
+        function cancelGame() {
+            location.reload();
         }
 
+        // GAME LOGIC
         function updateStatus(msg) {
             document.getElementById('status').textContent = msg;
         }
 
-        // HEURISTIC AI (Minimax with Alpha-Beta Pruning)
+        function makeMove(index) {
+            if (!gameActive || board[index] !== '') return;
+            
+            // Check turn
+            if (currentPlayer !== mySymbol && !isAI) {
+                updateStatus('Not your turn!');
+                return;
+            }
+            
+            executeMove(index, currentPlayer);
+            
+            // Broadcast if 2-player
+            if (!isAI && gameCode) {
+                localStorage.setItem('ttt-move-' + gameCode, JSON.stringify({
+                    index: index,
+                    player: currentPlayer,
+                    timestamp: Date.now()
+                }));
+            }
+            
+            // Check game end
+            if (gameActive && checkWin(currentPlayer)) {
+                endGame(currentPlayer + ' wins!');
+                return;
+            }
+            
+            if (gameActive && board.every(c => c !== '')) {
+                endGame('Draw!');
+                return;
+            }
+            
+            // Switch turn
+            if (gameActive) {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                
+                if (isAI && currentPlayer !== mySymbol) {
+                    updateStatus('AI thinking...');
+                    setTimeout(makeAIMove, 600);
+                } else {
+                    updateStatus(currentPlayer === mySymbol ? 'Your turn (' + currentPlayer + ')' : 
+                                'Waiting for ' + currentPlayer + '...');
+                }
+            }
+        }
+
+        function executeMove(index, player) {
+            board[index] = player;
+            const cell = document.querySelector(`.cell[data-index="${index}"]`);
+            cell.textContent = player;
+            cell.classList.add('taken', player.toLowerCase());
+            log(player + ' plays position ' + (index + 1));
+        }
+
+        function handleRemoteMove(e) {
+            if (!gameCode) return;
+            if (e.key === 'ttt-move-' + gameCode) {
+                const data = JSON.parse(e.newValue);
+                if (data.player !== mySymbol) {
+                    // Opponent moved
+                    if (board[data.index] === '') {
+                        executeMove(data.index, data.player);
+                        
+                        // Check win
+                        if (checkWin(data.player)) {
+                            endGame(data.player + ' wins!');
+                            return;
+                        }
+                        
+                        if (board.every(c => c !== '')) {
+                            endGame('Draw!');
+                            return;
+                        }
+                        
+                        // Now my turn
+                        currentPlayer = mySymbol;
+                        updateStatus('Your turn (' + mySymbol + ')');
+                    }
+                }
+            }
+        }
+
+        // AI LOGIC (Minimax)
         function makeAIMove() {
             if (!gameActive) return;
             
-            let bestMove;
-            
-            if (aiDifficulty === 'easy') {
-                // Random valid move
-                const available = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
-                bestMove = available[Math.floor(Math.random() * available.length)];
-            } else if (aiDifficulty === 'medium') {
-                // Try to win, else block, else random
-                bestMove = findWinningMove(foeSymbol) || 
-                          findWinningMove(mySymbol) || 
-                          getBestMoveHeuristic();
-            } else {
-                // Expert: Minimax
-                bestMove = getBestMoveMinimax();
-            }
-            
-            executeMove(bestMove, foeSymbol);
-            document.getElementById('ai-status').style.display = 'none';
-            document.getElementById('ai-status').classList.remove('thinking');
+            const move = getBestMove();
+            makeMove(move);
         }
 
-        function findWinningMove(symbol) {
+        function getBestMove() {
+            // Try win
             for (let i = 0; i < 9; i++) {
                 if (board[i] === '') {
-                    board[i] = symbol;
-                    const wins = checkWin(symbol);
-                    board[i] = ''; // undo
-                    if (wins) return i;
+                    board[i] = mySymbol === 'X' ? 'O' : 'X';
+                    const win = checkWin(mySymbol === 'X' ? 'O' : 'X');
+                    board[i] = '';
+                    if (win) return i;
                 }
             }
-            return null;
-        }
-
-        function getBestMoveHeuristic() {
-            // Priority: Center, Corners, Edges
+            
+            // Block
+            const foe = mySymbol === 'X' ? 'O' : 'X';
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === '') {
+                    board[i] = foe;
+                    const win = checkWin(foe);
+                    board[i] = '';
+                    if (win) return i;
+                }
+            }
+            
+            // Center
             if (board[4] === '') return 4;
             
-            const corners = [0, 2, 6, 8];
-            const availableCorners = corners.filter(i => board[i] === '');
-            if (availableCorners.length > 0) {
-                return availableCorners[Math.floor(Math.random() * availableCorners.length)];
-            }
+            // Corners
+            const corners = [0, 2, 6, 8].filter(i => board[i] === '');
+            if (corners.length > 0) return corners[Math.floor(Math.random() * corners.length)];
             
-            const edges = [1, 3, 5, 7];
-            const availableEdges = edges.filter(i => board[i] === '');
-            if (availableEdges.length > 0) {
-                return availableEdges[Math.floor(Math.random() * availableEdges.length)];
-            }
+            // Edges
+            const edges = [1, 3, 5, 7].filter(i => board[i] === '');
+            if (edges.length > 0) return edges[Math.floor(Math.random() * edges.length)];
             
             return board.indexOf('');
         }
 
-        function getBestMoveMinimax() {
-            let bestScore = -Infinity;
-            let move = 0;
-            
-            for (let i = 0; i < 9; i++) {
-                if (board[i] === '') {
-                    board[i] = foeSymbol;
-                    let score = minimax(board, 0, false, -Infinity, Infinity);
-                    board[i] = ''; // undo
-                    if (score > bestScore) {
-                        bestScore = score;
-                        move = i;
-                    }
-                }
-            }
-            return move;
-        }
-
-        function minimax(board, depth, isMaximizing, alpha, beta) {
-            if (checkWin(foeSymbol)) return 10 - depth;
-            if (checkWin(mySymbol)) return depth - 10;
-            if (board.every(cell => cell !== '')) return 0;
-            
-            if (isMaximizing) {
-                let bestScore = -Infinity;
-                for (let i = 0; i < 9; i++) {
-                    if (board[i] === '') {
-                        board[i] = foeSymbol;
-                        let score = minimax(board, depth + 1, false, alpha, beta);
-                        board[i] = '';
-                        bestScore = Math.max(score, bestScore);
-                        alpha = Math.max(alpha, score);
-                        if (beta <= alpha) break;
-                    }
-                }
-                return bestScore;
-            } else {
-                let bestScore = Infinity;
-                for (let i = 0; i < 9; i++) {
-                    if (board[i] === '') {
-                        board[i] = mySymbol;
-                        let score = minimax(board, depth + 1, true, alpha, beta);
-                        board[i] = '';
-                        bestScore = Math.min(score, bestScore);
-                        beta = Math.min(beta, score);
-                        if (beta <= alpha) break;
-                    }
-                }
-                return bestScore;
-            }
-        }
-
-        // Win Detection
-        function checkWin(symbol) {
+        function checkWin(player) {
             const wins = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Cols
-                [0, 4, 8], [2, 4, 6] // Diagonals
+                [0,1,2], [3,4,5], [6,7,8],
+                [0,3,6], [1,4,7], [2,5,8],
+                [0,4,8], [2,4,6]
             ];
             
             return wins.some(combo => {
-                if (combo.every(i => board[i] === symbol)) {
-                    highlightWin(combo);
+                if (combo.every(i => board[i] === player)) {
+                    combo.forEach(i => document.querySelector(`.cell[data-index="${i}"]`).classList.add('winning'));
                     return true;
                 }
                 return false;
             });
         }
 
-        function highlightWin(combo) {
-            combo.forEach(i => {
-                document.querySelector(`.cell[data-index="${i}"]`).classList.add('winning');
-            });
-        }
-
-        function endGame(message, winner) {
+        function endGame(msg) {
             gameActive = false;
-            updateStatus(message);
-            document.getElementById('ai-status').style.display = 'none';
-            
-            if (winner === 'X') scores.x++;
-            else if (winner === 'O') scores.o++;
-            else scores.draw++;
-            
-            document.querySelector('#score-x span').textContent = scores.x;
-            document.querySelector('#score-o span').textContent = scores.o;
-            document.querySelector('#score-draw span').textContent = scores.draw;
-            
-            log('Game Over: ' + message);
+            updateStatus(msg);
+            log(msg);
         }
 
         function resetGame() {
             board = ['', '', '', '', '', '', '', '', ''];
-            gameActive = true;
             currentPlayer = 'X';
+            gameActive = true;
             
             document.querySelectorAll('.cell').forEach(cell => {
                 cell.textContent = '';
                 cell.className = 'cell';
-                cell.style.background = '';
             });
             
-            updateStatus(mySymbol === 'X' ? 'Your turn' : 'AI starts...');
-            document.getElementById('score-x').classList.add('active');
-            document.getElementById('score-o').classList.remove('active');
-            
-            if (isAI && mySymbol === 'O') {
-                setTimeout(makeAIMove, 500);
+            if (isAI) {
+                updateStatus(mySymbol === 'X' ? 'Your turn' : 'AI starts...');
+                if (mySymbol === 'O') setTimeout(makeAIMove, 500);
+            } else {
+                updateStatus(mySymbol === 'X' ? 'Your turn (X)' : 'Waiting for X...');
             }
         }
     </script>
