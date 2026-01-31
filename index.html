@@ -3,467 +3,439 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AnyDevice RPS</title>
+    <title>Ghost RPS - https://dormantone.github.io/ghost/</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: #0a0a0a;
+            background: #000;
             color: #0f0;
             font-family: 'Courier New', monospace;
-            min-height: 100vh;
             padding: 20px;
-            text-align: center;
+            line-height: 1.6;
         }
-        .btn {
-            background: transparent;
+        h1 { text-align: center; margin-bottom: 10px; font-size: 24px; }
+        .url { text-align: center; font-size: 12px; opacity: 0.6; margin-bottom: 30px; }
+        
+        button {
+            background: #001100;
             border: 2px solid #0f0;
             color: #0f0;
-            padding: 15px 30px;
+            padding: 15px;
+            margin: 5px;
+            cursor: pointer;
             font-family: inherit;
             font-size: 16px;
-            cursor: pointer;
-            margin: 10px;
-            text-transform: uppercase;
-        }
-        .btn:hover {
-            background: #0f0;
-            color: #000;
-        }
-        .btn:disabled {
-            border-color: #333;
-            color: #333;
-            cursor: not-allowed;
-        }
-        .hidden { display: none !important; }
-        
-        #qrcode {
-            margin: 20px auto;
-            padding: 20px;
-            background: white;
-            display: inline-block;
-            border: 3px solid #0f0;
-        }
-        
-        .code-box {
             width: 100%;
-            max-width: 400px;
-            margin: 10px auto;
-            padding: 15px;
-            background: #000;
+            max-width: 300px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        button:hover { background: #0f0; color: #000; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        .panel {
             border: 1px solid #0f0;
-            color: #0f0;
-            font-family: monospace;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 500px;
+            display: none;
+        }
+        .panel.active { display: block; }
+        
+        #qrcanvas {
+            margin: 20px auto;
+            display: block;
+            border: 10px solid white;
+            background: white;
+        }
+        
+        .code-display {
+            background: #001100;
+            border: 1px solid #0f0;
+            padding: 15px;
+            margin: 10px 0;
             font-size: 11px;
             word-break: break-all;
             cursor: pointer;
+            user-select: all;
         }
+        .code-display:hover { background: #002200; }
         
-        .section {
-            margin: 30px 0;
-            padding: 20px;
-            border: 1px dashed #0f0;
-        }
-        
-        #game-panel {
-            display: none;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        
-        .choices {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin: 30px 0;
-        }
-        
-        .choice {
-            width: 80px;
-            height: 80px;
-            border: 2px solid #0f0;
-            background: rgba(0, 20, 0, 0.5);
+        textarea {
+            width: 100%;
+            background: #000;
+            border: 1px solid #0f0;
             color: #0f0;
-            font-size: 40px;
-            cursor: pointer;
+            padding: 10px;
+            font-family: inherit;
+            margin: 10px 0;
+            min-height: 100px;
+        }
+        
+        #game { max-width: 600px; margin: 0 auto; text-align: center; }
+        .choices { display: flex; justify-content: center; gap: 20px; margin: 40px 0; }
+        .choice {
+            width: 100px;
+            height: 100px;
+            border: 2px solid #0f0;
+            font-size: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
-            user-select: none;
+            cursor: pointer;
+            background: rgba(0, 50, 0, 0.3);
         }
+        .choice:hover { transform: scale(1.1); background: rgba(0, 255, 0, 0.2); }
+        .choice.picked { background: #0f0; color: #000; transform: scale(1.2); }
+        .choice:disabled { opacity: 0.3; pointer-events: none; }
         
-        .choice:hover:not(.disabled) {
-            background: rgba(0, 255, 0, 0.2);
-            transform: scale(1.1);
-        }
+        .score { font-size: 36px; margin: 20px 0; display: flex; justify-content: space-around; }
+        #message { text-align: center; margin: 20px 0; font-size: 20px; height: 30px; }
+        #foe-choice { font-size: 60px; text-align: center; height: 80px; margin: 20px 0; opacity: 0.3; }
         
-        .choice.disabled {
-            opacity: 0.3;
-            pointer-events: none;
-        }
-        
-        .choice.selected {
-            background: #0f0;
-            color: #000;
-        }
-        
-        .score-board {
-            font-size: 32px;
-            margin: 20px 0;
-            display: flex;
-            justify-content: center;
-            gap: 40px;
-        }
-        
-        #status {
-            margin: 20px 0;
-            padding: 10px;
-            border: 1px solid #0f0;
-            min-height: 50px;
-        }
-        
+        .big-text { font-size: 14px; margin: 20px 0; color: #ff0; text-align: center; }
         .error { color: #f00; border-color: #f00; }
         .success { color: #0f0; background: rgba(0, 255, 0, 0.1); }
         
-        video {
-            width: 100%;
-            max-width: 400px;
-            border: 2px solid #0f0;
-            margin: 10px 0;
-        }
+        video { width: 100%; max-width: 400px; border: 2px solid #0f0; display: block; margin: 10px auto; }
     </style>
 </head>
 <body>
-    <h1>◢ ANYDEVICE RPS ◣</h1>
-    <div id="status">Ready</div>
 
-    <div id="setup">
-        <button class="btn" onclick="hostGame()">CREATE GAME (Host)</button>
-        <button class="btn" onclick="showJoin()">JOIN GAME (Scan)</button>
-        
-        <!-- Host Panel -->
-        <div id="host-panel" class="section hidden">
-            <h3>Scan with phone or copy code:</h3>
-            <div id="qrcode">Generating...</div>
-            <div style="margin-top: 10px; font-size: 12px; color: #888;">Or copy this text:</div>
-            <div id="offer-code" class="code-box" onclick="copyToClipboard(this)">Generating...</div>
-            
-            <div id="answer-section" class="hidden" style="margin-top: 20px;">
-                <h3>Paste response from phone:</h3>
-                <textarea id="answer-input" class="code-box" style="height: 100px;" placeholder="Paste code here..."></textarea>
-                <button class="btn" onclick="submitAnswer()">CONNECT</button>
-            </div>
-        </div>
-        
-        <!-- Join Panel -->
-        <div id="join-panel" class="section hidden">
-            <button class="btn" onclick="startCamera()">Scan QR with Camera</button>
-            <button class="btn" onclick="showManualJoin()">Paste Code Instead</button>
-            
-            <div id="camera-area" class="hidden">
-                <video id="video" playsinline></video>
-                <canvas id="canvas" style="display: none;"></canvas>
-                <div style="font-size: 12px; margin-top: 5px;">Point camera at QR code</div>
-            </div>
-            
-            <div id="manual-join" class="hidden" style="margin-top: 20px;">
-                <textarea id="join-input" class="code-box" style="height: 100px;" placeholder="Paste host code here..."></textarea>
-                <button class="btn" onclick="createAnswer()">CONNECT</button>
-            </div>
-            
-            <div id="answer-display" class="hidden" style="margin-top: 20px;">
-                <h3>Show this to host:</h3>
-                <div id="answer-qrcode"></div>
-                <div class="code-box" id="answer-code" onclick="copyToClipboard(this)"></div>
-            </div>
-        </div>
-    </div>
+<h1>◢ GHOST RPS ◣</h1>
+<div class="url">https://dormantone.github.io/ghost/</div>
 
-    <!-- Game Panel -->
-    <div id="game-panel">
-        <div class="score-board">
-            <div>YOU: <span id="my-score">0</span></div>
-            <div>FOE: <span id="foe-score">0</span></div>
-        </div>
-        <div id="round-status" style="margin: 20px 0; font-size: 24px;">Choose!</div>
-        <div class="choices">
-            <div class="choice" id="rock" onclick="play('rock')">✊</div>
-            <div class="choice" id="paper" onclick="play('paper')">✋</div>
-            <div class="choice" id="scissors" onclick="play('scissors')">✌</div>
-        </div>
-        <div id="foe-move" style="font-size: 60px; height: 80px; margin: 20px 0; opacity: 0.3;">?</div>
-        <button class="btn" onclick="location.reload()" style="margin-top: 30px;">RESET</button>
-    </div>
-
-    <!-- QRCode Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<div id="setup">
+    <p style="text-align: center; margin-bottom: 20px;">
+        <strong>Computer vs Phone</strong><br>
+        No installs. Direct connection.
+    </p>
     
-    <script>
-        let pc = null;
-        let dc = null;
-        let isHost = false;
-        let myChoice = null;
-        let foeChoice = null;
-        let myScore = 0;
-        let foeScore = 0;
-        let roundActive = false;
+    <button onclick="becomeHost()">1. CREATE GAME (Computer)</button>
+    <button onclick="becomeJoiner()">2. JOIN GAME (Phone)</button>
+    
+    <!-- HOST PANEL -->
+    <div id="host-panel" class="panel">
+        <div class="big-text">Scan with phone OR copy text:</div>
         
-        const status = document.getElementById('status');
+        <canvas id="qrcanvas"></canvas>
+        <div id="qr-fallback" style="display: none; color: #f00; text-align: center;">QR Failed - use text below</div>
         
-        function setStatus(msg, type='') {
-            status.textContent = msg;
-            status.className = type;
-            console.log(msg);
-        }
+        <div style="margin-top: 20px; font-size: 12px;">CLICK TO COPY:</div>
+        <div class="code-display" id="host-code" onclick="copyText(this)">Generating connection code...</div>
         
-        // HOST
-        async function hostGame() {
-            isHost = true;
-            document.getElementById('host-panel').classList.remove('hidden');
-            document.getElementById('join-panel').classList.add('hidden');
-            setStatus('Creating game...');
-            
-            try {
-                pc = new RTCPeerConnection({
-                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-                });
-                
-                dc = pc.createDataChannel('game');
-                setupChannel(dc);
-                
-                pc.onicecandidate = (e) => {
-                    if (!e.candidate) {
-                        // ICE complete
-                        const offer = pc.localDescription;
-                        const offerStr = btoa(JSON.stringify(offer));
-                        
-                        // Show QR
-                        document.getElementById('qrcode').innerHTML = '';
-                        try {
-                            new QRCode(document.getElementById('qrcode'), {
-                                text: offerStr,
-                                width: 200,
-                                height: 200,
-                                colorDark: '#000',
-                                colorLight: '#fff',
-                                correctLevel: QRCode.CorrectLevel.H
-                            });
-                            setStatus('QR Code ready! Scan with phone.');
-                        } catch(err) {
-                            document.getElementById('qrcode').textContent = 'QR Error - use text below';
-                            setStatus('QR failed, use text code');
-                        }
-                        
-                        document.getElementById('offer-code').textContent = offerStr;
-                        document.getElementById('answer-section').classList.remove('hidden');
-                    }
-                };
-                
-                const offer = await pc.createOffer();
-                await pc.setLocalDescription(offer);
-                
-            } catch(e) {
-                setStatus('Error: ' + e.message, 'error');
-                console.error(e);
-            }
-        }
+        <div style="margin-top: 30px; border-top: 1px solid #0f0; padding-top: 20px;">
+            <div class="big-text">Paste phone's response here:</div>
+            <textarea id="answer-receive" placeholder="Paste the response code from phone..."></textarea>
+            <button onclick="completeHost()">START GAME</button>
+        </div>
+    </div>
+    
+    <!-- JOINER PANEL -->
+    <div id="joiner-panel" class="panel">
+        <button onclick="startCamera()">Scan QR Code</button>
+        <button onclick="showManual()">Type Code Instead</button>
         
-        function submitAnswer() {
-            const answerStr = document.getElementById('answer-input').value.trim();
-            if (!answerStr) return setStatus('Paste the answer code!', 'error');
-            
-            try {
-                const answer = JSON.parse(atob(answerStr));
-                pc.setRemoteDescription(new RTCSessionDescription(answer));
-                setStatus('Connected!', 'success');
-                startGame();
-            } catch(e) {
-                setStatus('Invalid code: ' + e.message, 'error');
-            }
-        }
+        <div id="camera-section" style="display: none;">
+            <video id="video" playsinline></video>
+            <canvas id="scan-canvas" style="display: none;"></canvas>
+            <div style="text-align: center; font-size: 12px;">Point camera at computer screen</div>
+        </div>
         
-        // JOIN
-        function showJoin() {
-            document.getElementById('join-panel').classList.remove('hidden');
-            document.getElementById('host-panel').classList.add('hidden');
-        }
+        <div id="manual-section" style="display: none; margin-top: 20px;">
+            <div class="big-text">Paste computer's code:</div>
+            <textarea id="offer-input" placeholder="Paste here..."></textarea>
+            <button onclick="processOffer()">CONNECT</button>
+        </div>
         
-        function showManualJoin() {
-            document.getElementById('manual-join').classList.remove('hidden');
-            document.getElementById('camera-area').classList.add('hidden');
-        }
+        <div id="response-section" style="display: none; margin-top: 30px; border-top: 1px solid #0f0; padding-top: 20px;">
+            <div class="big-text">Show this to computer:</div>
+            <canvas id="response-qr"></canvas>
+            <div class="code-display" id="response-code" onclick="copyText(this)"></div>
+        </div>
+    </div>
+</div>
+
+<!-- GAME UI -->
+<div id="game" style="display: none;">
+    <div class="score">
+        <div>YOU: <span id="me">0</span></div>
+        <div>FOE: <span id="foe">0</span></div>
+    </div>
+    <div id="message">Choose your weapon!</div>
+    
+    <div class="choices" id="buttons">
+        <button class="choice" onclick="shoot('rock')">✊</button>
+        <button class="choice" onclick="shoot('paper')">✋</button>
+        <button class="choice" onclick="shoot('scissors')">✌</button>
+    </div>
+    
+    <div id="foe-choice">?</div>
+    
+    <button onclick="location.reload()" style="margin-top: 40px; font-size: 12px;">New Game</button>
+</div>
+
+<script>
+let pc = null;
+let channel = null;
+let isHost = false;
+let myMove = null;
+let foeMove = null;
+let myScore = 0;
+let foeScore = 0;
+
+// HOST
+async function becomeHost() {
+    isHost = true;
+    document.getElementById('host-panel').classList.add('active');
+    updateStatus('Creating secure channel...');
+    
+    try {
+        pc = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        });
         
-        async function startCamera() {
-            document.getElementById('camera-area').classList.remove('hidden');
-            const video = document.getElementById('video');
-            
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                video.srcObject = stream;
-                video.play();
-                setStatus('Camera active - point at QR');
-                scanLoop();
-            } catch(e) {
-                setStatus('Camera failed: ' + e.message, 'error');
-                showManualJoin();
-            }
-        }
+        channel = pc.createDataChannel('ghost');
+        setupDataChannel(channel);
         
-        function scanLoop() {
-            if (!document.getElementById('camera-area').classList.contains('hidden')) {
-                const video = document.getElementById('video');
-                const canvas = document.getElementById('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imgData.data, imgData.width, imgData.height);
-                    
-                    if (code) {
-                        handleOffer(code.data);
-                        return;
-                    }
-                }
-                requestAnimationFrame(scanLoop);
-            }
-        }
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
         
-        async function handleOffer(offerStr) {
-            setStatus('Processing offer...');
-            try {
-                pc = new RTCPeerConnection({
-                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-                });
-                
-                pc.ondatachannel = (e) => {
-                    dc = e.channel;
-                    setupChannel(dc);
-                };
-                
-                pc.onicecandidate = (e) => {
-                    if (!e.candidate) {
-                        const answer = pc.localDescription;
-                        const answerStr = btoa(JSON.stringify(answer));
-                        
-                        document.getElementById('answer-display').classList.remove('hidden');
-                        document.getElementById('answer-code').textContent = answerStr;
-                        
-                        // Generate answer QR
-                        document.getElementById('answer-qrcode').innerHTML = '';
-                        try {
-                            new QRCode(document.getElementById('answer-qrcode'), {
-                                text: answerStr,
-                                width: 200,
-                                height: 200
-                            });
-                        } catch(e) {
-                            document.getElementById('answer-qrcode').textContent = 'Use text code';
-                        }
-                        
-                        setStatus('Show QR/code to host!');
-                    }
-                };
-                
-                const offer = JSON.parse(atob(offerStr));
-                await pc.setRemoteDescription(new RTCSessionDescription(offer));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                
-            } catch(e) {
-                setStatus('Error: ' + e.message, 'error');
-            }
-        }
+        // Wait for ICE or timeout
+        setTimeout(() => {
+            const code = btoa(JSON.stringify(pc.localDescription));
+            showHostCode(code);
+        }, 1000);
         
-        function createAnswer() {
-            const offerStr = document.getElementById('join-input').value.trim();
-            if (!offerStr) return setStatus('Enter the code!', 'error');
-            handleOffer(offerStr);
-        }
-        
-        // GAME
-        function setupChannel(channel) {
-            channel.onopen = () => {
-                setStatus('Channel open! Starting...', 'success');
-                startGame();
-            };
-            channel.onmessage = (e) => {
-                const data = JSON.parse(e.data);
-                if (data.type === 'move') {
-                    foeChoice = data.move;
-                    resolveRound();
-                }
-            };
-        }
-        
-        function startGame() {
-            document.getElementById('setup').classList.add('hidden');
-            document.getElementById('game-panel').style.display = 'block';
-        }
-        
-        function play(move) {
-            if (roundActive || !dc || dc.readyState !== 'open') return;
-            
-            roundActive = true;
-            myChoice = move;
-            
-            document.querySelectorAll('.choice').forEach(c => c.classList.add('disabled'));
-            document.getElementById(move).classList.remove('disabled');
-            document.getElementById(move).classList.add('selected');
-            
-            document.getElementById('round-status').textContent = 'Waiting...';
-            dc.send(JSON.stringify({ type: 'move', move: move }));
-            
-            if (foeChoice) resolveRound();
-        }
-        
-        function resolveRound() {
-            if (!myChoice || !foeChoice) return;
-            
-            document.getElementById('foe-move').textContent = 
-                foeChoice === 'rock' ? '✊' : foeChoice === 'paper' ? '✋' : '✌';
-            document.getElementById('foe-move').style.opacity = '1';
-            
-            const win = (myChoice === 'rock' && foeChoice === 'scissors') ||
-                       (myChoice === 'paper' && foeChoice === 'rock') ||
-                       (myChoice === 'scissors' && foeChoice === 'paper');
-            const draw = myChoice === foeChoice;
-            
-            const resultDiv = document.getElementById('round-status');
-            if (win) {
-                myScore++;
-                resultDiv.textContent = 'YOU WIN!';
-            } else if (draw) {
-                resultDiv.textContent = 'DRAW';
+    } catch(e) {
+        alert('Error: ' + e.message);
+        console.error(e);
+    }
+}
+
+function showHostCode(code) {
+    document.getElementById('host-code').textContent = code;
+    updateStatus('Code ready! Scan or copy.');
+    
+    // Try to make QR
+    try {
+        const canvas = document.getElementById('qrcanvas');
+        QRCode.toCanvas(canvas, code, { width: 300, margin: 2 }, function(error) {
+            if (error) {
+                console.error('QR Error:', error);
+                document.getElementById('qr-fallback').style.display = 'block';
+                canvas.style.display = 'none';
             } else {
-                foeScore++;
-                resultDiv.textContent = 'YOU LOSE';
+                updateStatus('QR Code ready!');
             }
-            
-            document.getElementById('my-score').textContent = myScore;
-            document.getElementById('foe-score').textContent = foeScore;
-            
-            setTimeout(() => {
-                myChoice = null;
-                foeChoice = null;
-                roundActive = false;
-                document.querySelectorAll('.choice').forEach(c => {
-                    c.classList.remove('disabled', 'selected');
-                });
-                document.getElementById('foe-move').textContent = '?';
-                document.getElementById('foe-move').style.opacity = '0.3';
-                document.getElementById('round-status').textContent = 'Choose!';
-            }, 3000);
-        }
+        });
+    } catch(e) {
+        document.getElementById('qr-fallback').style.display = 'block';
+        console.error('QR Exception:', e);
+    }
+}
+
+function completeHost() {
+    const answer = document.getElementById('answer-receive').value.trim();
+    if (!answer) return alert('Paste the response from phone!');
+    
+    try {
+        const desc = JSON.parse(atob(answer));
+        pc.setRemoteDescription(desc);
+        startGame();
+    } catch(e) {
+        alert('Invalid code: ' + e.message);
+    }
+}
+
+// JOINER
+function becomeJoiner() {
+    document.getElementById('joiner-panel').classList.add('active');
+}
+
+function showManual() {
+    document.getElementById('manual-section').style.display = 'block';
+    document.getElementById('camera-section').style.display = 'none';
+}
+
+async function startCamera() {
+    document.getElementById('camera-section').style.display = 'block';
+    document.getElementById('manual-section').style.display = 'none';
+    
+    const video = document.getElementById('video');
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = stream;
+        video.play();
+        scanFrame();
+    } catch(e) {
+        alert('Camera failed. Use manual input.');
+        showManual();
+    }
+}
+
+function scanFrame() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('scan-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imgData.data, imgData.width, imgData.height);
         
-        function copyToClipboard(el) {
-            navigator.clipboard.writeText(el.textContent).then(() => {
-                setStatus('Copied!', 'success');
-                setTimeout(() => setStatus('Ready'), 1000);
-            });
+        if (code) {
+            handleOfferData(code.data);
+            return;
         }
-    </script>
+    }
+    requestAnimationFrame(scanFrame);
+}
+
+function processOffer() {
+    const data = document.getElementById('offer-input').value.trim();
+    if (data) handleOfferData(data);
+}
+
+async function handleOfferData(offerStr) {
+    try {
+        const offer = JSON.parse(atob(offerStr));
+        pc = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        });
+        
+        pc.ondatachannel = (e) => {
+            channel = e.channel;
+            setupDataChannel(channel);
+        };
+        
+        await pc.setRemoteDescription(offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        
+        setTimeout(() => {
+            const code = btoa(JSON.stringify(pc.localDescription));
+            showResponse(code);
+        }, 1000);
+        
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+function showResponse(code) {
+    document.getElementById('response-section').style.display = 'block';
+    document.getElementById('response-code').textContent = code;
+    
+    try {
+        QRCode.toCanvas(document.getElementById('response-qr'), code, { width: 250 });
+    } catch(e) {
+        console.log('QR skipped');
+    }
+    
+    updateStatus('Show this code to computer!');
+}
+
+// GAME LOGIC
+function setupDataChannel(dc) {
+    dc.onopen = () => {
+        updateStatus('CONNECTED!');
+        setTimeout(startGame, 500);
+    };
+    dc.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if (data.move) {
+            foeMove = data.move;
+            resolveRound();
+        }
+    };
+}
+
+function startGame() {
+    document.getElementById('setup').style.display = 'none';
+    document.getElementById('game').style.display = 'block';
+}
+
+function shoot(move) {
+    if (myMove) return;
+    myMove = move;
+    
+    // Visuals
+    const buttons = document.querySelectorAll('.choice');
+    buttons.forEach(b => b.disabled = true);
+    event.target.classList.add('picked');
+    document.getElementById('message').textContent = 'Waiting for foe...';
+    
+    // Send
+    if (channel && channel.readyState === 'open') {
+        channel.send(JSON.stringify({ move: move }));
+    }
+    
+    if (foeMove) resolveRound();
+}
+
+function resolveRound() {
+    if (!myMove || !foeMove) return;
+    
+    const msg = document.getElementById('message');
+    const foeDisplay = document.getElementById('foe-choice');
+    
+    foeDisplay.textContent = foeMove === 'rock' ? '✊' : foeMove === 'paper' ? '✋' : '✌';
+    foeDisplay.style.opacity = '1';
+    
+    // Determine winner
+    if (myMove === foeMove) {
+        msg.textContent = 'DRAW!';
+        msg.style.color = '#ff0';
+    } else if (
+        (myMove === 'rock' && foeMove === 'scissors') ||
+        (myMove === 'paper' && foeMove === 'rock') ||
+        (myMove === 'scissors' && foeMove === 'paper')
+    ) {
+        myScore++;
+        msg.textContent = 'YOU WIN!';
+        msg.style.color = '#0f0';
+    } else {
+        foeScore++;
+        msg.textContent = 'YOU LOSE!';
+        msg.style.color = '#f00';
+    }
+    
+    document.getElementById('me').textContent = myScore;
+    document.getElementById('foe').textContent = foeScore;
+    
+    // Reset after 2 seconds
+    setTimeout(() => {
+        myMove = null;
+        foeMove = null;
+        document.querySelectorAll('.choice').forEach(b => {
+            b.disabled = false;
+            b.classList.remove('picked');
+        });
+        foeDisplay.textContent = '?';
+        foeDisplay.style.opacity = '0.3';
+        msg.textContent = 'Choose!';
+        msg.style.color = '#0f0';
+    }, 2000);
+}
+
+function copyText(el) {
+    navigator.clipboard.writeText(el.textContent).then(() => {
+        const old = el.textContent;
+        el.textContent = 'COPIED!';
+        setTimeout(() => el.textContent = old, 1000);
+    });
+}
+
+function updateStatus(txt) {
+    console.log(txt);
+}
+</script>
+
 </body>
 </html>
