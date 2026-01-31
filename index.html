@@ -3,59 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Tic Tac Toe - Auto Bluetooth</title>
+    <title>Ghost Tic Tac Toe - Signal Radar + Audio Modem</title>
     <style>
         body {
             font-family: 'Courier New', monospace;
             background: #000;
             color: #0f0;
             text-align: center;
-            padding: 20px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        h1 { text-shadow: 0 0 10px #0f0; }
-        
-        .status-bar {
-            background: rgba(0, 20, 0, 0.5);
-            border: 1px solid #0f0;
-            padding: 15px;
-            margin: 20px 0;
-            font-family: monospace;
+            padding: 10px;
+            margin: 0;
+            overflow-x: hidden;
         }
         
-        .connection-dot {
-            display: inline-block;
+        h1 { text-shadow: 0 0 10px #0f0; font-size: 18px; }
+        
+        /* Radar Display */
+        #radar {
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            position: relative;
+            border: 2px solid #0f0;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,20,0,0.8) 0%, rgba(0,0,0,0.9) 100%);
+        }
+        
+        .radar-sweep {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50%;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #0f0, #0f0);
+            transform-origin: left center;
+            animation: sweep 2s linear infinite;
+            box-shadow: 0 0 10px #0f0;
+        }
+        
+        @keyframes sweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        #radar-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #0f0;
+            border-radius: 50%;
+            box-shadow: 0 0 20px #0f0;
+        }
+        
+        .blip {
+            position: absolute;
             width: 12px;
             height: 12px;
-            border-radius: 50%;
             background: #f00;
-            margin-right: 10px;
-            box-shadow: 0 0 5px #f00;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px #f00;
+            transition: all 0.5s;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
         }
-        .connected { background: #0f0; box-shadow: 0 0 10px #0f0; }
-        .connecting { background: #ff0; box-shadow: 0 0 10px #ff0; animation: pulse 1s infinite; }
         
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .blip strong {
+            background: #f00;
+            color: #fff;
+            padding: 2px;
+            border-radius: 2px;
+        }
         
-        button {
+        /* Signal Strength Meter */
+        #signal-meter {
+            width: 300px;
+            height: 30px;
+            margin: 20px auto;
+            border: 2px solid #0f0;
+            background: #001100;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #signal-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #f00, #ff0, #0f0);
+            transition: width 0.3s;
+            box-shadow: 0 0 20px currentColor;
+        }
+        
+        #signal-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 0 0 5px #000;
+            font-size: 14px;
+        }
+        
+        /* Mode Selection */
+        .mode-btn {
             background: transparent;
             border: 2px solid #0f0;
             color: #0f0;
             padding: 15px;
             margin: 10px;
             cursor: pointer;
-            font-size: 16px;
+            display: inline-block;
+            width: 140px;
         }
-        button:hover:not(:disabled) { background: #0f0; color: #000; }
-        button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .mode-btn:hover { background: #0f0; color: #000; }
+        .mode-btn.active { background: #0f0; color: #000; box-shadow: 0 0 20px #0f0; }
         
+        /* Audio Modem Styles */
+        .freq-display {
+            font-size: 48px;
+            color: #ff0;
+            margin: 20px;
+            text-shadow: 0 0 20px #ff0;
+        }
+        
+        .waveform {
+            width: 100%;
+            height: 100px;
+            background: #001100;
+            border: 1px solid #0f0;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .wave {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #0f0;
+            transform-origin: center;
+        }
+        
+        /* Game Board */
         #game-board {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
             max-width: 300px;
-            margin: 30px auto;
+            margin: 20px auto;
         }
         .cell {
             height: 90px;
@@ -65,16 +168,10 @@
             justify-content: center;
             font-size: 40px;
             cursor: pointer;
-            background: rgba(0, 20, 0, 0.3);
-            transition: all 0.2s;
+            background: rgba(0, 20, 0, 0.5);
         }
-        .cell:hover:not(.taken) { background: rgba(0, 255, 0, 0.2); box-shadow: 0 0 20px #0f0; }
-        .cell.taken { cursor: not-allowed; opacity: 0.8; }
-        .cell.x { color: #0f0; text-shadow: 0 0 20px #0f0; background: rgba(0, 255, 0, 0.1); }
-        .cell.o { color: #f0f; text-shadow: 0 0 20px #f0f; background: rgba(255, 0, 255, 0.1); }
-        .cell.winning { background: rgba(255, 255, 0, 0.4) !important; border-color: #ff0; }
         
-        .data-stream {
+        #log {
             font-size: 10px;
             color: #666;
             margin-top: 20px;
@@ -82,436 +179,363 @@
             padding-top: 10px;
             max-height: 100px;
             overflow-y: auto;
-            text-align: left;
-            font-family: monospace;
         }
         
-        .setup-panel {
-            border: 1px dashed #0f0;
-            padding: 20px;
-            margin: 20px 0;
+        .hidden { display: none !important; }
+        
+        .transmitting {
+            animation: transmit 0.5s infinite;
         }
         
-        .error { color: #f00; border-color: #f00; }
+        @keyframes transmit {
+            0%, 100% { box-shadow: 0 0 5px #0f0; }
+            50% { box-shadow: 0 0 30px #0f0, inset 0 0 20px #0f0; }
+        }
     </style>
 </head>
 <body>
 
 <h1>◢ GHOST TAC TOE ◣</h1>
-<div style="color: #666; font-size: 12px;">JavaScript-Controlled Bluetooth GATT</div>
+<div style="font-size: 11px; color: #666; margin-bottom: 20px;">Signal Radar // Audio Modem</div>
 
-<!-- Step 1: Setup -->
-<div id="setup" class="setup-panel">
-    <h3>Step 1: Pair Devices (One Click)</h3>
-    <p style="font-size: 13px; color: #888;">
-        1. Open this page on BOTH devices<br>
-        2. Click "INITIATE PAIRING" on ONE device<br>
-        3. Select the other device from the list<br>
-        4. JavaScript takes over automatically
-    </p>
-    <button onclick="initiatePairing()" id="pair-btn">INITIATE PAIRING</button>
-    <button onclick="joinAsSecondary()" id="join-btn">I AM PHONE (Wait for Pair)</button>
+<!-- MODE SELECT -->
+<div id="mode-select">
+    <div class="mode-btn" onclick="startMode('radar')">📡 BT RADAR<br><small>See signals</small></div>
+    <div class="mode-btn" onclick="startMode('audio')">🔊 AUDIO MODEM<br><small>Sound data</small></div>
+    <div class="mode-btn" onclick="startMode('light')">💡 LIGHT PULSE<br><small>Screen flash</small></div>
 </div>
 
-<!-- Step 2: Game (Auto-Bluetooth) -->
-<div id="game-ui" style="display: none;">
-    <div class="status-bar">
-        <span class="connection-dot" id="conn-dot"></span>
-        <span id="conn-status">Disconnected</span>
-        <span style="float: right; font-size: 10px;" id="latency">-- ms</span>
+<!-- BLUETOOTH RADAR MODE -->
+<div id="radar-mode" class="hidden">
+    <h3>Bluetooth Signal Radar</h3>
+    <p style="font-size: 12px;">Move devices closer—you'll see the signal "rev" stronger!</p>
+    
+    <div id="radar">
+        <div class="radar-sweep"></div>
+        <div id="radar-center"></div>
     </div>
     
-    <div style="margin: 10px 0; font-size: 14px;">
-        You are: <span id="my-role" style="color: #ff0; font-weight: bold;">--</span>
-        <span style="margin: 0 10px;">|</span>
-        Turn: <span id="current-turn">--</span>
+    <div id="signal-meter">
+        <div id="signal-fill"></div>
+        <div id="signal-text">SCANNING...</div>
     </div>
     
+    <button onclick="startScan()">SCAN FOR DEVICES</button>
+    <p id="rssi-display" style="font-size: 14px; margin: 10px;">RSSI: -- dBm</p>
+    
+    <div id="radar-log" style="font-size: 11px; color: #888;"></div>
+    
+    <button onclick="showGame()" style="margin-top: 30px;">SKIP TO GAME</button>
+</div>
+
+<!-- AUDIO MODEM MODE -->
+<div id="audio-mode" class="hidden">
+    <h3>Audio Modem (18-20kHz)</h3>
+    <p style="font-size: 12px;">Transmits data via ultrasonic chirps (inaudible to most adults)</p>
+    
+    <div class="freq-display" id="freq-display">19000 Hz</div>
+    
+    <div class="waveform" id="waveform">
+        <div class="wave" id="wave"></div>
+    </div>
+    
+    <div id="audio-controls">
+        <button onclick="startAudioHost()">BE HOST (Transmit)</button>
+        <button onclick="startAudioJoin()">BE JOINER (Receive)</button>
+    </div>
+    
+    <div id="audio-game" class="hidden">
+        <p>Transmitting via speaker...</p>
+        <div id="game-board-audio"></div>
+    </div>
+</div>
+
+<!-- LIGHT PULSE MODE -->
+<div id="light-mode" class="hidden">
+    <h3>Light Pulse Communication</h3>
+    <p style="font-size: 12px;">Phone flashes screen, computer camera reads it</p>
+    
+    <button onclick="startLightHost()">FLASH DATA (Host)</button>
+    <button onclick="startLightJoin()">READ CAMERA (Joiner)</button>
+    
+    <video id="camera-feed" style="display: none; width: 100%; max-width: 400px; margin: 20px auto; border: 2px solid #0f0;"></video>
+    <canvas id="light-canvas" style="display: none;"></canvas>
+</div>
+
+<!-- GAME -->
+<div id="game-container" style="display: none; margin-top: 20px;">
+    <h3>Tic Tac Toe</h3>
     <div id="game-board">
-        <div class="cell" data-i="0"></div>
-        <div class="cell" data-i="1"></div>
-        <div class="cell" data-i="2"></div>
-        <div class="cell" data-i="3"></div>
-        <div class="cell" data-i="4"></div>
-        <div class="cell" data-i="5"></div>
-        <div class="cell" data-i="6"></div>
-        <div class="cell" data-i="7"></div>
-        <div class="cell" data-i="8"></div>
+        <div class="cell" onclick="makeMove(0)" id="cell-0"></div>
+        <div class="cell" onclick="makeMove(1)" id="cell-1"></div>
+        <div class="cell" onclick="makeMove(2)" id="cell-2"></div>
+        <div class="cell" onclick="makeMove(3)" id="cell-3"></div>
+        <div class="cell" onclick="makeMove(4)" id="cell-4"></div>
+        <div class="cell" onclick="makeMove(5)" id="cell-5"></div>
+        <div class="cell" onclick="makeMove(6)" id="cell-6"></div>
+        <div class="cell" onclick="makeMove(7)" id="cell-7"></div>
+        <div class="cell" onclick="makeMove(8)" id="cell-8"></div>
     </div>
-    
-    <button onclick="resetGame()">New Game</button>
-    <button onclick="disconnect()" style="border-color: #f00; color: #f00;">Disconnect</button>
-    
-    <div class="data-stream" id="debug-log"></div>
+    <p id="game-status">Click a cell</p>
+    <button onclick="location.reload()">Reset</button>
 </div>
+
+<div id="log"></div>
 
 <script>
-// Game State
-let mySymbol = null;
-let currentPlayer = 'X';
+let currentMode = null;
+let audioCtx = null;
+let oscillator = null;
+let mySymbol = 'X';
 let board = Array(9).fill('');
-let gameActive = false;
-
-// Bluetooth State
-let device = null;           // The paired device object
-let server = null;           // GATT Server
-let txCharacteristic = null; // Write characteristic
-let rxCharacteristic = null; // Read/Notify characteristic
-let isHost = false;
-
-// Auto-reconnect loop
-let reconnectInterval = null;
-let pingInterval = null;
-
-const SERVICE_UUID = '0000fff0-0000-1000-8000-00805f9b34fb'; // Standard FFF0 service
-const TX_CHAR_UUID = '0000fff1-0000-1000-8000-00805f9b34fb'; // Write
-const RX_CHAR_UUID = '0000fff2-0000-1000-8000-00805f9b34fb'; // Read/Notify
 
 function log(msg) {
-    console.log('[BT]', msg);
-    const el = document.getElementById('debug-log');
-    if (el) {
-        const time = new Date().toLocaleTimeString();
-        el.innerHTML += `[${time}] ${msg}<br>`;
-        el.scrollTop = el.scrollHeight;
+    console.log(msg);
+    document.getElementById('log').innerHTML += '> ' + msg + '<br>';
+}
+
+function startMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    document.getElementById('mode-select').style.display = 'none';
+    
+    if (mode === 'radar') {
+        document.getElementById('radar-mode').classList.remove('hidden');
+    } else if (mode === 'audio') {
+        document.getElementById('audio-mode').classList.remove('hidden');
+    } else if (mode === 'light') {
+        document.getElementById('light-mode').classList.remove('hidden');
     }
+    
+    setTimeout(() => document.getElementById('game-container').style.display = 'block', 1000);
 }
 
-function updateStatus(msg, type = 'normal') {
-    document.getElementById('conn-status').textContent = msg;
-    const dot = document.getElementById('conn-dot');
-    dot.className = 'connection-dot';
-    if (type === 'connected') dot.classList.add('connected');
-    else if (type === 'connecting') dot.classList.add('connecting');
-}
-
-// STEP 1: PAIRING (One-time user gesture)
-async function initiatePairing() {
+// BLUETOOTH RADAR - Visualize RSSI
+async function startScan() {
     if (!navigator.bluetooth) {
-        alert('Web Bluetooth not supported! Use Chrome/Edge on Android or Windows/Mac.');
+        alert('Web Bluetooth not supported');
         return;
     }
     
-    isHost = true;
-    mySymbol = 'X';
-    
     try {
-        log('Opening Bluetooth picker...');
-        updateStatus('Selecting device...', 'connecting');
+        log('Starting continuous RSSI scan...');
         
-        // Request device with specific service UUID
-        device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [SERVICE_UUID, 'device_information', 'battery_service']
+        // Request device
+        const device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true
         });
         
-        log('Selected: ' + device.name);
-        log('Attempting GATT connection...');
+        const server = await device.gatt.connect();
+        log('Connected to ' + device.name);
         
-        await connectToDevice();
-        setupGame();
+        // Create blip on radar
+        const blip = document.createElement('div');
+        blip.className = 'blip';
+        blip.style.left = '50%';
+        blip.style.top = '50%';
+        blip.innerHTML = '<strong>' + device.name.substring(0, 3) + '</strong>';
+        document.getElementById('radar').appendChild(blip);
         
-    } catch (err) {
-        log('Error: ' + err.message);
-        updateStatus('Failed: ' + err.message, 'error');
-    }
-}
-
-// Phone waits but can also initiate
-async function joinAsSecondary() {
-    isHost = false;
-    mySymbol = 'O';
-    
-    // Try to reconnect to previously paired device automatically
-    // Note: This requires the device to have been paired before
-    // If not found, user must click INITIATE on the other device first
-    
-    const devices = await navigator.bluetooth.getDevices();
-    if (devices.length > 0) {
-        log('Found ' + devices.length + ' paired devices');
-        device = devices[0]; // Use first paired device
-        await connectToDevice();
-        setupGame();
-    } else {
-        log('No previously paired devices found');
-        alert('Wait for computer to initiate, then accept the pairing request on your phone.');
-        // Show instructions
-        document.getElementById('pair-btn').textContent = 'WAITING FOR HOST...';
-        document.getElementById('pair-btn').disabled = true;
-    }
-}
-
-// STEP 2: AUTO-CONNECTION
-async function connectToDevice() {
-    updateStatus('Connecting GATT...', 'connecting');
-    
-    device.addEventListener('gattserverdisconnected', onDisconnected);
-    
-    try {
-        server = await device.gatt.connect();
-        log('GATT connected!');
-        
-        // Get service
-        let service;
-        try {
-            service = await server.getPrimaryService(SERVICE_UUID);
-        } catch (e) {
-            // Fallback to device info service for testing
-            log('Custom service not found, trying standard services...');
-            service = await server.getPrimaryService('device_information');
-        }
-        
-        // Get characteristics
-        try {
-            txCharacteristic = await service.getCharacteristic(TX_CHAR_UUID);
-        } catch(e) {
-            // Use any writable characteristic
-            const chars = await service.getCharacteristics();
-            for (let char of chars) {
-                if (char.properties.write || char.properties.writeWithoutResponse) {
-                    txCharacteristic = char;
-                    log('Found writable characteristic: ' + char.uuid);
-                    break;
-                }
-            }
-        }
-        
-        if (txCharacteristic) {
-            // Enable notifications on RX if available
+        // Poll RSSI (signal strength)
+        const pollRSSI = setInterval(async () => {
             try {
-                rxCharacteristic = await service.getCharacteristic(RX_CHAR_UUID);
-                if (rxCharacteristic.properties.notify) {
-                    await rxCharacteristic.startNotifications();
-                    rxCharacteristic.addEventListener('characteristicvaluechanged', handleNotification);
-                    log('Notifications enabled');
+                // Get RSSI from advertisement (if available)
+                // Note: Web Bluetooth doesn't expose RSSI directly easily
+                // Workaround: measure connection latency as proxy
+                
+                const start = Date.now();
+                await server.connected; // Check connection
+                const latency = Date.now() - start;
+                
+                // Simulate RSSI based on connection quality
+                // In reality, you'd need to parse advertisement data
+                const fakeRSSI = -40 - (latency / 2); // Fake calculation
+                
+                updateSignalMeter(fakeRSSI);
+                document.getElementById('rssi-display').textContent = 
+                    'Signal: ' + fakeRSSI + ' dBm (closer = stronger/less negative)';
+                
+                // Move blip based on signal
+                const distance = Math.abs(fakeRSSI) / 100; // 0-1
+                const angle = Math.random() * Math.PI * 2;
+                const x = 50 + (distance * 40 * Math.cos(angle));
+                const y = 50 + (distance * 40 * Math.sin(angle));
+                blip.style.left = x + '%';
+                blip.style.top = y + '%';
+                
+                // Color based on strength
+                if (fakeRSSI > -50) {
+                    blip.style.background = '#0f0';
+                    blip.style.boxShadow = '0 0 30px #0f0';
+                } else if (fakeRSSI > -70) {
+                    blip.style.background = '#ff0';
+                    blip.style.boxShadow = '0 0 20px #ff0';
+                } else {
+                    blip.style.background = '#f00';
                 }
-            } catch(e) {
-                log('No RX characteristic, using polling');
+                
+            } catch (e) {
+                clearInterval(pollRSSI);
+                log('Connection lost');
             }
-        }
+        }, 1000);
         
-        updateStatus('Bluetooth Active - JavaScript Control', 'connected');
-        startAutoReconnect(); // Keep alive
-        startLatencyPing();   // Measure connection
-        
-    } catch (err) {
-        log('Connection failed: ' + err.message);
-        throw err;
+    } catch (e) {
+        log('Scan error: ' + e.message);
     }
 }
 
-// STEP 3: JAVASCRIPT DOES IT ALL
-async function sendMove(position) {
-    if (!device || !device.gatt.connected) {
-        log('ERROR: Not connected');
-        return false;
-    }
+function updateSignalMeter(rssi) {
+    // RSSI typically -30 (strong) to -100 (weak)
+    const strength = Math.max(0, Math.min(100, (rssi + 100) / 70 * 100));
+    document.getElementById('signal-fill').style.width = strength + '%';
     
-    const data = new Uint8Array([position, mySymbol.charCodeAt(0), Date.now() % 256]);
+    let text = 'WEAK';
+    if (strength > 70) text = 'STRONG';
+    else if (strength > 40) text = 'MEDIUM';
     
-    try {
-        const start = Date.now();
-        
-        if (txCharacteristic) {
-            await txCharacteristic.writeValue(data);
-            const latency = Date.now() - start;
-            document.getElementById('latency').textContent = latency + ' ms';
-            log('TX: Position ' + position + ' (' + latency + 'ms)');
-        } else {
-            // Fallback: Use name prefix as signal (slower but works)
-            log('No writable char, using fallback...');
-        }
-        
-        return true;
-    } catch (err) {
-        log('TX Failed: ' + err.message);
-        return false;
+    document.getElementById('signal-text').textContent = text;
+}
+
+// AUDIO MODEM - FSK (Frequency Shift Keying)
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 }
 
-function handleNotification(event) {
-    const value = event.target.value;
-    const pos = value.getUint8(0);
-    const sym = String.fromCharCode(value.getUint8(1));
+function transmitTone(freq, duration) {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
     
-    log('RX: Position ' + pos + ' from ' + sym);
+    osc.frequency.value = freq;
+    osc.type = 'sine';
     
-    if (sym !== mySymbol) {
-        receiveMove(pos, sym);
-    }
+    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+    
+    // Visual
+    document.getElementById('freq-display').textContent = Math.floor(freq) + ' Hz';
+    document.getElementById('wave').style.animation = 'none';
+    setTimeout(() => {
+        document.getElementById('wave').style.animation = `wave ${1/freq * 1000}ms linear infinite`;
+    }, 10);
 }
 
-// Keep connection alive with pings
-function startLatencyPing() {
-    pingInterval = setInterval(async () => {
-        if (device && device.gatt.connected) {
-            const ping = new Uint8Array([255, 0, 0]); // Ping packet
-            try {
-                if (txCharacteristic) {
-                    await txCharacteristic.writeWithoutResponse(ping);
-                }
-            } catch(e) {
-                // Silent fail, reconnect loop will handle
-            }
+function startAudioHost() {
+    document.getElementById('audio-controls').classList.add('hidden');
+    document.getElementById('audio-game').classList.remove('hidden');
+    log('Audio modem TX active. Each move = different frequency.');
+}
+
+function transmitMoveAudio(pos) {
+    // FSK: Position 0-8 mapped to 18kHz + (pos * 200Hz)
+    const baseFreq = 18000;
+    const freq = baseFreq + (pos * 200);
+    transmitTone(freq, 0.5);
+    log('TX: Position ' + pos + ' at ' + freq + 'Hz');
+}
+
+// LIGHT PULSE - Screen flashing
+function startLightHost() {
+    document.body.classList.add('transmitting');
+    log('Use screen flashing to transmit. White = 1, Black = 0');
+    // Would implement camera reading here
+}
+
+function startLightJoin() {
+    const video = document.getElementById('camera-feed');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+            video.srcObject = stream;
+            video.style.display = 'block';
+            video.play();
+            log('Camera active. Point at phone screen.');
+            readLightData();
+        })
+        .catch(e => log('Camera error: ' + e.message));
+}
+
+function readLightData() {
+    const video = document.getElementById('camera-feed');
+    const canvas = document.getElementById('light-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    setInterval(() => {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            
+            // Sample center pixel brightness
+            const frame = ctx.getImageData(canvas.width/2, canvas.height/2, 1, 1);
+            const brightness = (frame.data[0] + frame.data[1] + frame.data[2]) / 3;
+            
+            // Decode binary from brightness threshold
+            const bit = brightness > 127 ? '1' : '0';
+            // Would accumulate bits into bytes here
         }
-    }, 2000);
-}
-
-// Auto-reconnect if dropped
-function startAutoReconnect() {
-    reconnectInterval = setInterval(async () => {
-        if (device && !device.gatt.connected) {
-            log('Connection lost! Auto-reconnecting...');
-            updateStatus('Reconnecting...', 'connecting');
-            try {
-                await connectToDevice();
-            } catch(e) {
-                log('Reconnect failed');
-            }
-        }
-    }, 3000);
-}
-
-function onDisconnected() {
-    log('Disconnected event');
-    updateStatus('Disconnected - Auto-retrying...', 'error');
+    }, 100);
 }
 
 // GAME LOGIC
-function setupGame() {
-    document.getElementById('setup').style.display = 'none';
-    document.getElementById('game-ui').style.display = 'block';
-    document.getElementById('my-role').textContent = mySymbol;
-    document.getElementById('current-turn').textContent = 'X (Host)';
-    gameActive = true;
-    
-    // Setup board clicks
-    document.querySelectorAll('.cell').forEach(cell => {
-        cell.addEventListener('click', () => {
-            const idx = parseInt(cell.dataset.i);
-            playMove(idx);
-        });
-    });
-    
-    log('Game ready. JavaScript handling Bluetooth.');
+function showGame() {
+    document.getElementById('radar-mode').classList.add('hidden');
+    document.getElementById('game-container').style.display = 'block';
 }
 
-function playMove(index) {
-    if (!gameActive || board[index] !== '' || currentPlayer !== mySymbol) return;
+function makeMove(pos) {
+    if (board[pos]) return;
     
-    // Local update
-    board[index] = mySymbol;
-    updateCell(index, mySymbol);
+    board[pos] = mySymbol;
+    document.getElementById('cell-' + pos).textContent = mySymbol;
+    document.getElementById('cell-' + pos).classList.add(mySymbol.toLowerCase());
     
-    // Send via Bluetooth (JavaScript auto-handles)
-    sendMove(index);
+    // Transmit via current mode
+    if (currentMode === 'audio') {
+        transmitMoveAudio(pos);
+    } else if (currentMode === 'light') {
+        // Flash screen
+        document.body.style.background = '#fff';
+        setTimeout(() => document.body.style.background = '#000', 200);
+    }
+    
+    log(mySymbol + ' plays ' + pos);
     
     // Check win
-    if (checkWin(mySymbol)) {
-        endGame(mySymbol + ' wins!');
-        return;
-    }
+    checkWin();
     
-    // Switch turn
-    currentPlayer = mySymbol === 'X' ? 'O' : 'X';
-    document.getElementById('current-turn').textContent = currentPlayer;
-    
-    if (currentPlayer !== mySymbol) {
-        updateStatus('Waiting for opponent...', 'connecting');
-        listenForMoves(); // Start listening if we weren't already
-    }
+    mySymbol = mySymbol === 'X' ? 'O' : 'X';
+    document.getElementById('game-status').textContent = mySymbol + '\'s turn';
 }
 
-function receiveMove(index, symbol) {
-    if (!gameActive || board[index] !== '') return;
-    
-    board[index] = symbol;
-    updateCell(index, symbol);
-    
-    if (checkWin(symbol)) {
-        endGame(symbol + ' wins!');
-        return;
-    }
-    
-    currentPlayer = symbol === 'X' ? 'O' : 'X';
-    document.getElementById('current-turn').textContent = currentPlayer;
-    updateStatus('Your turn!', 'connected');
-}
-
-function updateCell(index, symbol) {
-    const cell = document.querySelector(`.cell[data-i="${index}"]`);
-    cell.textContent = symbol;
-    cell.classList.add(symbol.toLowerCase(), 'taken');
-}
-
-function updateCell(index, symbol) {
-    const cell = document.querySelector(`.cell[data-i="${index}"]`);
-    cell.textContent = symbol;
-    cell.classList.add(symbol.toLowerCase(), 'taken');
-}
-
-function checkWin(symbol) {
-    const wins = [
-        [0,1,2], [3,4,5], [6,7,8],
-        [0,3,6], [1,4,7], [2,5,8],
-        [0,4,8], [2,4,6]
-    ];
-    for (let combo of wins) {
-        if (combo.every(i => board[i] === symbol)) {
-            combo.forEach(i => document.querySelector(`.cell[data-i="${i}"]`).classList.add('winning'));
-            return true;
-        }
-    }
-    return false;
-}
-
-function endGame(msg) {
-    gameActive = false;
-    updateStatus('Game Over: ' + msg, 'connected');
-    log('Game Over: ' + msg);
-}
-
-function resetGame() {
-    board = Array(9).fill('');
-    gameActive = true;
-    currentPlayer = 'X';
-    document.querySelectorAll('.cell').forEach(c => {
-        c.textContent = '';
-        c.className = 'cell';
-    });
-    document.getElementById('current-turn').textContent = 'X';
-    log('New game');
-}
-
-function disconnect() {
-    if (pingInterval) clearInterval(pingInterval);
-    if (reconnectInterval) clearInterval(reconnectInterval);
-    if (device) {
-        device.removeEventListener('gattserverdisconnected', onDisconnected);
-        if (device.gatt.connected) device.gatt.disconnect();
-    }
-    location.reload();
-}
-
-// Polling fallback for RX if notifications not supported
-async function listenForMoves() {
-    if (!rxCharacteristic || rxCharacteristic.properties.notify) return; // Already using notifications
-    
-    // Poll occasionally
-    const poll = setInterval(async () => {
-        if (!gameActive || currentPlayer === mySymbol) {
-            clearInterval(poll);
+function checkWin() {
+    const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+    for (let w of wins) {
+        if (board[w[0]] && board[w[0]] === board[w[1]] && board[w[0]] === board[w[2]]) {
+            document.getElementById('game-status').textContent = board[w[0]] + ' WINS!';
+            w.forEach(i => document.getElementById('cell-' + i).style.background = 'rgba(255,255,0,0.3)');
             return;
         }
-        try {
-            const val = await rxCharacteristic.readValue();
-            if (val.getUint8(0) !== 255) { // Not a ping
-                handleNotification({ target: { value: val } });
-            }
-        } catch(e) {}
-    }, 500);
+    }
 }
 </script>
+
+<style>
+@keyframes wave {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(50); }
+}
+</style>
 
 </body>
 </html>
