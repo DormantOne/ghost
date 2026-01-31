@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Tic Tac Toe - Fixed</title>
+    <title>Ghost Tic Tac Toe - Ping System</title>
     <script src="https://cdn.jsdelivr.net/npm/qrious/dist/qrious.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -17,6 +17,7 @@
         }
         h1 { text-shadow: 0 0 15px #0f0; margin-bottom: 5px; font-size: 22px; }
         .sub { color: #666; font-size: 11px; margin-bottom: 20px; }
+        
         button {
             background: transparent;
             border: 2px solid #0f0;
@@ -30,8 +31,23 @@
         }
         button:hover:not(:disabled) { background: #0f0; color: #000; }
         button:disabled { opacity: 0.3; border-color: #333; cursor: not-allowed; }
-        .btn-start { background: #0f0; color: #000; font-weight: bold; font-size: 16px; }
-        .btn-start:hover { box-shadow: 0 0 20px #0f0; }
+        
+        .ping-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 1s infinite;
+        }
+        .ping-good { background: #0f0; box-shadow: 0 0 10px #0f0; }
+        .ping-warn { background: #ff0; box-shadow: 0 0 10px #ff0; }
+        .ping-bad { background: #f00; box-shadow: 0 0 10px #f00; animation: none; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
         
         canvas { margin: 15px auto; display: block; background: white; padding: 8px; }
         
@@ -52,7 +68,6 @@
             text-shadow: 0 0 20px #ff0;
             margin: 15px 0;
             font-weight: bold;
-            font-family: 'Courier New', monospace;
         }
         
         input[type="text"] {
@@ -64,7 +79,6 @@
             text-align: center;
             letter-spacing: 4px;
             width: 150px;
-            text-transform: uppercase;
             font-family: inherit;
         }
         
@@ -89,50 +103,74 @@
             cursor: pointer;
             background: rgba(0, 10, 0, 0.8);
             min-height: 80px;
+            transition: all 0.2s;
         }
         .cell:hover:not(.taken) { background: rgba(0, 255, 0, 0.2); }
         .cell.taken { cursor: not-allowed; }
         .cell.x { color: #0f0; text-shadow: 0 0 20px #0f0; }
         .cell.o { color: #f0f; text-shadow: 0 0 20px #f0f; }
-        .cell.winning { background: rgba(255, 255, 0, 0.3); border-color: #ff0; box-shadow: 0 0 30px #ff0; }
+        .cell.winning { background: rgba(255, 255, 0, 0.3); border-color: #ff0; }
         
-        #status {
-            font-size: 18px;
-            margin: 15px 0;
-            min-height: 25px;
-            color: #0ff;
-        }
-        
-        .opponent-status {
+        #status-bar {
+            background: rgba(0, 20, 0, 0.8);
+            border: 1px solid #0f0;
+            padding: 10px;
+            margin: 10px auto;
+            max-width: 400px;
             font-size: 12px;
-            color: #ff0;
-            border: 1px dashed #ff0;
-            padding: 5px 10px;
-            margin: 10px;
-            display: inline-block;
         }
         
-        #game-area { display: none; max-width: 500px; margin: 0 auto; }
-        
-        .log {
+        .connection-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 5px;
             font-size: 10px;
-            opacity: 0.6;
+            color: #888;
+        }
+        
+        .stat-box {
+            padding: 5px 10px;
+            border: 1px solid #003300;
+        }
+        
+        .debug-panel {
             margin-top: 15px;
-            border-top: 1px solid #003300;
-            padding-top: 10px;
-            max-height: 80px;
+            padding: 10px;
+            background: #000;
+            border: 1px dashed #333;
+            font-size: 10px;
+            color: #666;
+            text-align: left;
+            max-height: 100px;
             overflow-y: auto;
         }
+        
+        .sync-btn {
+            font-size: 11px;
+            padding: 5px 10px;
+            border-color: #ff0;
+            color: #ff0;
+        }
+        
+        .alert-box {
+            background: #330000;
+            border: 1px solid #f00;
+            color: #f00;
+            padding: 10px;
+            margin: 10px;
+            font-size: 12px;
+            display: none;
+        }
+        .alert-box.active { display: block; }
     </style>
 </head>
 <body>
 
     <h1>◢ GHOST TAC TOE ◣</h1>
-    <div class="sub">No Waiting // Instant Play // Bluetooth</div>
+    <div class="sub">Real-time Ping System // Latency Monitor</div>
 
-    <!-- Entry -->
     <div id="entry-point">
-        <p style="margin-bottom: 15px;">Scan with phone:</p>
+        <p style="margin-bottom: 15px;">Scan to open on phone:</p>
         <canvas id="url-qr"></canvas>
         <p style="color: #666; font-size: 11px;"><span id="current-url"></span></p>
         
@@ -141,32 +179,47 @@
             <button onclick="initHost()">👥 Host Game</button>
             <button onclick="showJoin()">🔍 Join Game</button>
         </div>
+        
+        <div class="alert-box" id="storage-warning">
+            ⚠️ Private/Incognito mode detected! Connection may fail.<br>
+            Use regular browser windows on both devices.
+        </div>
     </div>
 
-    <!-- Host Setup -->
     <div id="host-panel" class="panel">
         <h3>Your Game Code</h3>
         <div class="code-display" id="host-code">----</div>
-        <p style="font-size: 12px; color: #888; margin-bottom: 20px;">Tell opponent this code, then click START</p>
-        <button class="btn-start" onclick="startHostGame()">▶ START GAME</button>
+        <p style="font-size: 12px; color: #888;">Share this code with opponent</p>
+        <br>
+        <button onclick="enterGame()" style="background: #0f0; color: #000; font-weight: bold;">ENTER GAME</button>
         <br><br>
         <button onclick="cancelGame()" style="border-color: #666; color: #666;">Back</button>
     </div>
 
-    <!-- Join Setup -->
     <div id="join-panel" class="panel">
         <h3>Enter Game Code</h3>
-        <input type="text" id="join-code" maxlength="4" placeholder="ABCD">
+        <input type="text" id="join-code" maxlength="4">
         <br><br>
-        <button class="btn-start" onclick="joinGame()">▶ JOIN GAME</button>
+        <button onclick="enterGame()" style="background: #0f0; color: #000; font-weight: bold;">ENTER GAME</button>
         <br><br>
         <button onclick="cancelGame()" style="border-color: #666; color: #666;">Back</button>
     </div>
 
-    <!-- Game Area -->
-    <div id="game-area">
-        <div id="status">X's turn</div>
-        <div id="opponent-indicator" class="opponent-status" style="display: none;">Waiting for opponent...</div>
+    <div id="game-area" style="display: none;">
+        <div id="status-bar">
+            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+                <span id="ping-dot" class="ping-indicator ping-bad"></span>
+                <span id="conn-status">Disconnected</span>
+                <button class="sync-btn" onclick="forceSync()" style="margin-left: 10px;">FORCE SYNC</button>
+            </div>
+            <div class="connection-stats">
+                <div class="stat-box">Last Ping: <span id="last-ping">--</span>ms</div>
+                <div class="stat-box">Opponent: <span id="last-seen">Never</span></div>
+                <div class="stat-box">Mode: <span id="game-mode">--</span></div>
+            </div>
+        </div>
+        
+        <div id="game-status" style="font-size: 16px; margin: 10px; color: #0ff;">Initializing...</div>
         
         <div id="game-board">
             <div class="cell" data-index="0" onclick="makeMove(0)"></div>
@@ -180,12 +233,16 @@
             <div class="cell" data-index="8" onclick="makeMove(8)"></div>
         </div>
         
-        <div style="margin-top: 20px;">
+        <div style="margin-top: 15px;">
             <button onclick="resetGame()">New Round</button>
+            <button onclick="testPing()">Test Ping</button>
             <button onclick="location.reload()" style="border-color: #666; color: #666;">Exit</button>
         </div>
         
-        <div class="log" id="game-log"></div>
+        <div class="debug-panel" id="debug-log">
+            <strong>Debug Log:</strong><br>
+            Waiting for game start...
+        </div>
     </div>
 
     <script>
@@ -198,220 +255,363 @@
             size: 180
         });
 
+        // Check if storage works (detect private mode)
+        try {
+            localStorage.setItem('test', '1');
+            localStorage.removeItem('test');
+        } catch(e) {
+            document.getElementById('storage-warning').classList.add('active');
+            log('WARNING: localStorage blocked - game will not work in 2-player mode');
+        }
+
         // Game State
-        let board = ['', '', '', '', '', '', '', '', ''];
+        let board = Array(9).fill('');
         let currentPlayer = 'X';
-        let gameActive = true;
-        let mySymbol = null;
-        let isAI = false;
+        let gameActive = false;
+        let mySymbol = 'X';
         let isHost = false;
         let gameCode = null;
-        let opponentPresent = false;
-        let lastMoveTime = 0;
-        let pollInterval = null;
+        let isAI = false;
+        let opponentLastSeen = 0;
+        let myLastPing = 0;
+        let pingInterval = null;
+        let checkInterval = null;
 
         function log(msg) {
-            const el = document.getElementById('game-log');
-            if (el) {
-                el.innerHTML += '> ' + msg + '<br>';
-                el.scrollTop = el.scrollHeight;
-            }
-            console.log(msg);
+            console.log('[Ghost]', msg);
+            const debug = document.getElementById('debug-log');
+            const time = new Date().toLocaleTimeString();
+            debug.innerHTML += `${time}: ${msg}<br>`;
+            debug.scrollTop = debug.scrollHeight;
         }
 
         function generateCode() {
-            return Math.random().toString(36).substring(2, 6).toUpperCase();
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let result = '';
+            for(let i = 0; i < 4; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
         }
 
-        // CANCEL
         function cancelGame() {
-            if (pollInterval) clearInterval(pollInterval);
+            if(pingInterval) clearInterval(pingInterval);
+            if(checkInterval) clearInterval(checkInterval);
             location.reload();
         }
 
-        // SOLO MODE
         function startSolo() {
             isAI = true;
             isHost = false;
+            gameCode = 'SOLO' + Date.now().toString().slice(-4);
             mySymbol = 'X';
-            gameActive = true;
-            document.getElementById('entry-point').style.display = 'none';
-            document.getElementById('game-area').style.display = 'block';
-            document.getElementById('status').textContent = 'You are X (Green). AI is O (Pink).';
-            log('Solo mode: You vs AI');
+            enterGame(true);
         }
 
-        // HOST MODE
         function initHost() {
             isHost = true;
             isAI = false;
-            mySymbol = 'X';
             gameCode = generateCode();
-            
+            mySymbol = 'X';
+            document.getElementById('host-code').textContent = gameCode;
             document.getElementById('entry-point').style.display = 'none';
             document.getElementById('host-panel').classList.add('active');
-            document.getElementById('host-code').textContent = gameCode;
-            
-            log('Host code generated: ' + gameCode);
+            log('Generated host code: ' + gameCode);
         }
 
-        function startHostGame() {
-            // Host enters game immediately - no waiting!
-            document.getElementById('host-panel').classList.remove('active');
-            document.getElementById('game-area').style.display = 'block';
-            document.getElementById('opponent-indicator').style.display = 'inline-block';
-            document.getElementById('opponent-indicator').textContent = 'Code: ' + gameCode + ' - Waiting for opponent...';
-            
-            gameActive = true;
-            updateStatus('Your turn (X). Waiting for opponent to join...');
-            log('Game started! You are X.');
-            
-            // Start polling for opponent join
-            startPolling();
-        }
-
-        // JOIN MODE
         function showJoin() {
-            document.getElementById('entry-point').style.display = 'none';
-            document.getElementById('join-panel').classList.add('active');
-            // Focus input
-            setTimeout(() => document.getElementById('join-code').focus(), 100);
-        }
-
-        function joinGame() {
-            const code = document.getElementById('join-code').value.toUpperCase().trim();
-            if (code.length !== 4) {
-                alert('Enter 4-letter code!');
-                return;
-            }
-            
-            gameCode = code;
             isHost = false;
             isAI = false;
             mySymbol = 'O';
+            document.getElementById('entry-point').style.display = 'none';
+            document.getElementById('join-panel').classList.add('active');
+            document.getElementById('join-code').focus();
+        }
+
+        function enterGame(skipSetup = false) {
+            if(!skipSetup) {
+                if(!isHost) {
+                    const code = document.getElementById('join-code').value.toUpperCase().trim();
+                    if(code.length !== 4) return alert('Enter 4 character code!');
+                    gameCode = code;
+                }
+                document.getElementById('host-panel').classList.remove('active');
+                document.getElementById('join-panel').classList.remove('active');
+            }
             
-            document.getElementById('join-panel').classList.remove('active');
             document.getElementById('game-area').style.display = 'block';
-            document.getElementById('opponent-indicator').style.display = 'inline-block';
-            document.getElementById('opponent-indicator').textContent = 'Joined! Waiting for host...';
+            document.getElementById('game-mode').textContent = isAI ? 'Solo vs AI' : '2-Player (' + gameCode + ')';
             
             gameActive = true;
-            updateStatus('You are O. Waiting for X\'s first move...');
-            log('Joined game ' + gameCode + ' as O');
+            resetBoard();
             
-            // Announce presence to host
-            localStorage.setItem('ttt-present-' + gameCode, JSON.stringify({
-                joined: true,
-                time: Date.now()
-            }));
+            if(isAI) {
+                updateStatus('You are X (Green) vs AI');
+                startTurn();
+            } else {
+                updateStatus(isHost ? 'You are X - Waiting for opponent to join...' : 'You are O - Waiting for X to move...');
+                startPingSystem();
+            }
             
-            // Start polling for moves
-            startPolling();
+            log('Game started. Code: ' + gameCode);
         }
 
-        // POLLING SYSTEM (Works across all browsers/devices)
-        function startPolling() {
-            // Check every 500ms for updates
-            pollInterval = setInterval(() => {
-                checkForUpdates();
+        function startPingSystem() {
+            // Send heartbeat every 1 second
+            pingInterval = setInterval(() => {
+                if(!gameCode || gameCode.startsWith('SOLO')) return;
+                
+                const pingData = {
+                    type: 'ping',
+                    player: mySymbol,
+                    time: Date.now(),
+                    board: board,
+                    currentPlayer: currentPlayer,
+                    gameActive: gameActive
+                };
+                
+                try {
+                    localStorage.setItem(`ttt-ping-${gameCode}`, JSON.stringify(pingData));
+                    myLastPing = Date.now();
+                } catch(e) {
+                    log('Storage error: ' + e.message);
+                }
+            }, 1000);
+            
+            // Check for opponent ping every 500ms
+            checkInterval = setInterval(() => {
+                checkOpponentPing();
             }, 500);
+            
+            log('Ping system started');
         }
 
-        function checkForUpdates() {
-            if (!gameCode) return;
+        function checkOpponentPing() {
+            if(!gameCode || gameCode.startsWith('SOLO')) return;
             
-            // Check for opponent presence (host only)
-            if (isHost && !opponentPresent) {
-                const present = localStorage.getItem('ttt-present-' + gameCode);
-                if (present) {
-                    opponentPresent = true;
-                    document.getElementById('opponent-indicator').textContent = 'Opponent connected!';
-                    document.getElementById('opponent-indicator').style.borderColor = '#0f0';
-                    document.getElementById('opponent-indicator').style.color = '#0f0';
-                    log('Opponent joined!');
+            try {
+                const opponentKey = `ttt-ping-${gameCode}`;
+                const data = localStorage.getItem(opponentKey);
+                
+                if(data) {
+                    const ping = JSON.parse(data);
+                    
+                    // Only process if from opponent
+                    if(ping.player !== mySymbol) {
+                        const now = Date.now();
+                        const latency = now - ping.time;
+                        
+                        // Update opponent timestamp
+                        if(ping.time > opponentLastSeen) {
+                            opponentLastSeen = ping.time;
+                            document.getElementById('last-seen').textContent = Math.floor(latency/1000) + 's ago';
+                            
+                            // Update ping indicator
+                            const dot = document.getElementById('ping-dot');
+                            const status = document.getElementById('conn-status');
+                            
+                            if(latency < 2000) {
+                                dot.className = 'ping-indicator ping-good';
+                                status.textContent = 'Connected';
+                                status.style.color = '#0f0';
+                            } else if(latency < 5000) {
+                                dot.className = 'ping-indicator ping-warn';
+                                status.textContent = 'Slow';
+                                status.style.color = '#ff0';
+                            } else {
+                                dot.className = 'ping-indicator ping-bad';
+                                status.textContent = 'Disconnected';
+                                status.style.color = '#f00';
+                            }
+                            
+                            document.getElementById('last-ping').textContent = Math.floor(latency);
+                            
+                            // Sync game state if opponent has newer data
+                            if(ping.board && JSON.stringify(ping.board) !== JSON.stringify(board)) {
+                                syncBoard(ping.board, ping.currentPlayer);
+                            }
+                        }
+                    }
+                } else {
+                    document.getElementById('conn-status').textContent = 'No opponent found';
+                    document.getElementById('ping-dot').className = 'ping-indicator ping-bad';
                 }
-            }
-            
-            // Check for moves
-            const moveData = localStorage.getItem('ttt-move-' + gameCode);
-            if (moveData) {
-                const move = JSON.parse(moveData);
-                // Only process if it's newer than last move and not from us
-                if (move.time > lastMoveTime && move.player !== mySymbol) {
-                    lastMoveTime = move.time;
-                    applyMove(move.index, move.player);
-                }
+            } catch(e) {
+                log('Check error: ' + e.message);
             }
         }
 
-        // GAME LOGIC
-        function updateStatus(msg) {
-            document.getElementById('status').textContent = msg;
+        function syncBoard(newBoard, newCurrentPlayer) {
+            log('Syncing board from opponent...');
+            board = newBoard;
+            currentPlayer = newCurrentPlayer;
+            renderBoard();
+            updateTurnStatus();
+        }
+
+        function renderBoard() {
+            board.forEach((cell, i) => {
+                const el = document.querySelector(`.cell[data-index="${i}"]`);
+                el.textContent = cell;
+                el.className = 'cell ' + (cell ? cell.toLowerCase() + ' taken' : '');
+            });
         }
 
         function makeMove(index) {
-            if (!gameActive || board[index] !== '') return;
-            if (currentPlayer !== mySymbol) {
-                updateStatus('Not your turn! ' + currentPlayer + ' is playing...');
+            if(!gameActive) {
+                updateStatus('Game over. Click New Round.');
                 return;
             }
             
-            // Apply locally
-            applyMove(index, mySymbol);
-            
-            // Broadcast move
-            if (gameCode) {
-                lastMoveTime = Date.now();
-                localStorage.setItem('ttt-move-' + gameCode, JSON.stringify({
-                    index: index,
-                    player: mySymbol,
-                    time: lastMoveTime
-                }));
+            if(board[index] !== '') {
+                updateStatus('Cell already taken!');
+                return;
             }
             
-            // If AI mode, trigger AI
-            if (isAI && gameActive && currentPlayer !== mySymbol) {
-                setTimeout(makeAIMove, 600);
+            if(currentPlayer !== mySymbol && !isAI) {
+                updateStatus('Wait for opponent! It is ' + currentPlayer + "'s turn.");
+                return;
             }
-        }
-
-        function applyMove(index, player) {
-            if (board[index] !== '') return; // Already taken
             
-            board[index] = player;
-            const cell = document.querySelector(`.cell[data-index="${index}"]`);
-            cell.textContent = player;
-            cell.classList.add('taken', player.toLowerCase());
-            
-            log(player + ' plays position ' + (index + 1));
+            // Execute move
+            board[index] = currentPlayer;
+            renderBoard();
+            log(currentPlayer + ' moved to ' + index);
             
             // Check win
-            if (checkWin(player)) {
-                setTimeout(() => {
-                    highlightWin(player);
-                    endGame(player + ' wins!');
-                }, 100);
+            if(checkWin(currentPlayer)) {
+                endGame(currentPlayer + ' wins!');
                 return;
             }
             
             // Check draw
-            if (board.every(c => c !== '')) {
+            if(board.every(c => c !== '')) {
                 endGame('Draw!');
                 return;
             }
             
             // Switch turn
-            currentPlayer = player === 'X' ? 'O' : 'X';
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateTurnStatus();
             
-            if (isAI) {
+            // Broadcast move immediately
+            if(!isAI) {
+                forceSync();
+            } else if(currentPlayer === 'O') {
+                setTimeout(makeAIMove, 800);
+            }
+        }
+
+        function forceSync() {
+            if(!gameCode || gameCode.startsWith('SOLO')) return;
+            
+            const moveData = {
+                type: 'ping',
+                player: mySymbol,
+                time: Date.now(),
+                board: board,
+                currentPlayer: currentPlayer,
+                gameActive: gameActive
+            };
+            
+            localStorage.setItem(`ttt-ping-${gameCode}`, JSON.stringify(moveData));
+            log('Force sync sent');
+            
+            // Visual feedback
+            const btn = event.target || document.querySelector('.sync-btn');
+            const oldText = btn.textContent;
+            btn.textContent = 'SYNCED!';
+            setTimeout(() => btn.textContent = oldText, 500);
+        }
+
+        function testPing() {
+            if(!gameCode) return;
+            log('Testing storage...');
+            
+            try {
+                localStorage.setItem('test-ping', Date.now().toString());
+                const read = localStorage.getItem('test-ping');
+                const latency = Date.now() - parseInt(read);
+                log('Self-test ping: ' + latency + 'ms - Storage is working');
+                alert('Ping test: ' + latency + 'ms\n\nIf this is slow, connection will be slow.');
+            } catch(e) {
+                alert('Storage ERROR: ' + e.message);
+            }
+        }
+
+        function updateTurnStatus() {
+            if(isAI) {
                 updateStatus(currentPlayer === 'X' ? 'Your turn (X)' : 'AI thinking...');
             } else {
-                if (currentPlayer === mySymbol) {
-                    updateStatus('Your turn (' + currentPlayer + ')');
+                if(currentPlayer === mySymbol) {
+                    updateStatus('YOUR TURN (' + currentPlayer + ')');
                 } else {
-                    updateStatus('Waiting for ' + currentPlayer + '...');
+                    updateStatus('Waiting for opponent (' + currentPlayer + ')...');
                 }
             }
+        }
+
+        function updateStatus(msg) {
+            document.getElementById('game-status').textContent = msg;
+        }
+
+        function makeAIMove() {
+            if(!gameActive) return;
+            
+            const move = getBestMove();
+            board[move] = 'O';
+            renderBoard();
+            log('AI moves to ' + move);
+            
+            if(checkWin('O')) {
+                endGame('AI wins!');
+                return;
+            }
+            
+            if(board.every(c => c !== '')) {
+                endGame('Draw!');
+                return;
+            }
+            
+            currentPlayer = 'X';
+            updateStatus('Your turn (X)');
+        }
+
+        function getBestMove() {
+            // Try win
+            for(let i = 0; i < 9; i++) {
+                if(board[i] === '') {
+                    board[i] = 'O';
+                    if(checkWin('O')) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+            
+            // Block
+            for(let i = 0; i < 9; i++) {
+                if(board[i] === '') {
+                    board[i] = 'X';
+                    if(checkWin('X')) {
+                        board[i] = '';
+                        return i;
+                    }
+                    board[i] = '';
+                }
+            }
+            
+            // Center
+            if(board[4] === '') return 4;
+            
+            // Corners
+            const corners = [0, 2, 6, 8].filter(i => board[i] === '');
+            if(corners.length) return corners[Math.floor(Math.random() * corners.length)];
+            
+            // Any
+            const available = board.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+            return available[Math.floor(Math.random() * available.length)];
         }
 
         function checkWin(player) {
@@ -421,98 +621,46 @@
                 [0,4,8], [2,4,6]
             ];
             
-            return wins.some(combo => combo.every(i => board[i] === player));
-        }
-
-        function highlightWin(player) {
-            const wins = [
-                [0,1,2], [3,4,5], [6,7,8],
-                [0,3,6], [1,4,7], [2,5,8],
-                [0,4,8], [2,4,6]
-            ];
-            
-            wins.forEach(combo => {
-                if (combo.every(i => board[i] === player)) {
+            for(let combo of wins) {
+                if(combo.every(i => board[i] === player)) {
                     combo.forEach(i => document.querySelector(`.cell[data-index="${i}"]`).classList.add('winning'));
+                    return true;
                 }
-            });
+            }
+            return false;
         }
 
         function endGame(msg) {
             gameActive = false;
-            updateStatus(msg + ' Click New Round to play again.');
-            log('Game Over: ' + msg);
-        }
-
-        // AI LOGIC
-        function makeAIMove() {
-            if (!gameActive) return;
+            updateStatus(msg);
+            log('GAME OVER: ' + msg);
             
-            const move = getBestAIMove();
-            applyMove(move, 'O');
-        }
-
-        function getBestAIMove() {
-            const ai = 'O';
-            const human = 'X';
-            
-            // Try to win
-            for (let i = 0; i < 9; i++) {
-                if (board[i] === '') {
-                    board[i] = ai;
-                    if (checkWin(ai)) {
-                        board[i] = '';
-                        return i;
-                    }
-                    board[i] = '';
-                }
-            }
-            
-            // Block human win
-            for (let i = 0; i < 9; i++) {
-                if (board[i] === '') {
-                    board[i] = human;
-                    if (checkWin(human)) {
-                        board[i] = '';
-                        return i;
-                    }
-                    board[i] = '';
-                }
-            }
-            
-            // Take center
-            if (board[4] === '') return 4;
-            
-            // Take corner
-            const corners = [0, 2, 6, 8].filter(i => board[i] === '');
-            if (corners.length > 0) return corners[Math.floor(Math.random() * corners.length)];
-            
-            // Take edge
-            const edges = [1, 3, 5, 7].filter(i => board[i] === '');
-            if (edges.length > 0) return edges[Math.floor(Math.random() * edges.length)];
-            
-            return board.indexOf('');
+            // Broadcast final state
+            if(!isAI) forceSync();
         }
 
         function resetGame() {
-            board = ['', '', '', '', '', '', '', '', ''];
-            currentPlayer = 'X';
+            board = Array(9).fill('');
             gameActive = true;
-            lastMoveTime = 0;
+            currentPlayer = 'X';
+            renderBoard();
             
-            document.querySelectorAll('.cell').forEach(cell => {
-                cell.textContent = '';
-                cell.className = 'cell';
-            });
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('winning'));
             
-            if (isAI) {
-                updateStatus(mySymbol === 'X' ? 'Your turn (X)' : 'AI starts...');
-                if (mySymbol === 'O') setTimeout(makeAIMove, 500);
+            if(isAI) {
+                updateStatus('Your turn (X)');
             } else {
-                updateStatus(mySymbol === 'X' ? 'Your turn (X)' : 'Waiting for X...');
+                updateStatus(isHost ? 'Your turn (X)' : 'Waiting for X...');
             }
             
             log('New round started');
+            forceSync();
+        }
+
+        function resetBoard() {
+            board = Array(9).fill('');
+            renderBoard();
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('winning'));
         }
     </script>
 </body>
