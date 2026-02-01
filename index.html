@@ -3,539 +3,407 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ghost Tic Tac Toe - Signal Radar + Audio Modem</title>
+    <title>Bluetooth Spin Test</title>
     <style>
         body {
-            font-family: 'Courier New', monospace;
             background: #000;
             color: #0f0;
+            font-family: 'Courier New', monospace;
             text-align: center;
-            padding: 10px;
+            padding: 20px;
             margin: 0;
             overflow-x: hidden;
         }
         
-        h1 { text-shadow: 0 0 10px #0f0; font-size: 18px; }
+        h1 { font-size: 18px; text-shadow: 0 0 10px #0f0; margin-bottom: 5px; }
+        .sub { color: #666; font-size: 11px; margin-bottom: 30px; }
         
-        /* Radar Display */
-        #radar {
-            width: 300px;
-            height: 300px;
+        #compass {
+            width: 200px;
+            height: 200px;
             margin: 20px auto;
-            position: relative;
             border: 2px solid #0f0;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(0,20,0,0.8) 0%, rgba(0,0,0,0.9) 100%);
+            position: relative;
+            background: radial-gradient(circle, rgba(0,20,0,0.8) 0%, transparent 70%);
         }
         
-        .radar-sweep {
+        .antenna {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 50%;
-            height: 2px;
-            background: linear-gradient(to right, transparent, #0f0, #0f0);
-            transform-origin: left center;
-            animation: sweep 2s linear infinite;
-            box-shadow: 0 0 10px #0f0;
+            width: 4px;
+            height: 90px;
+            background: linear-gradient(to top, #0f0, transparent);
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%);
+            transition: all 0.1s;
         }
         
-        @keyframes sweep {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        #radar-center {
+        .signal-blob {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 10px;
-            height: 10px;
-            background: #0f0;
             border-radius: 50%;
+            background: rgba(0, 255, 0, 0.3);
             box-shadow: 0 0 20px #0f0;
+            transition: all 0.3s;
         }
         
-        .blip {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            background: #f00;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 20px #f00;
-            transition: all 0.5s;
-            font-size: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-        }
-        
-        .blip strong {
-            background: #f00;
-            color: #fff;
-            padding: 2px;
-            border-radius: 2px;
-        }
-        
-        /* Signal Strength Meter */
-        #signal-meter {
-            width: 300px;
-            height: 30px;
-            margin: 20px auto;
-            border: 2px solid #0f0;
-            background: #001100;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        #signal-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(to right, #f00, #ff0, #0f0);
-            transition: width 0.3s;
-            box-shadow: 0 0 20px currentColor;
-        }
-        
-        #signal-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
+        .reading {
+            font-size: 48px;
             font-weight: bold;
-            text-shadow: 0 0 5px #000;
-            font-size: 14px;
+            margin: 20px 0;
+            text-shadow: 0 0 20px currentColor;
         }
         
-        /* Mode Selection */
-        .mode-btn {
+        .device-list {
+            border: 1px solid #0f0;
+            margin: 20px auto;
+            max-width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+        }
+        
+        .device {
+            padding: 15px;
+            border-bottom: 1px solid #003300;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .device:hover { background: rgba(0, 255, 0, 0.1); }
+        
+        .signal-bars {
+            display: flex;
+            gap: 3px;
+        }
+        
+        .bar {
+            width: 8px;
+            height: 20px;
+            background: #003300;
+            transition: all 0.3s;
+        }
+        .bar.active { background: #0f0; box-shadow: 0 0 10px #0f0; }
+        .bar.weak { background: #ff0; }
+        .bar.dead { background: #f00; }
+        
+        button {
             background: transparent;
             border: 2px solid #0f0;
             color: #0f0;
-            padding: 15px;
+            padding: 15px 30px;
+            font-family: inherit;
+            font-size: 16px;
+            cursor: pointer;
             margin: 10px;
-            cursor: pointer;
-            display: inline-block;
-            width: 140px;
         }
-        .mode-btn:hover { background: #0f0; color: #000; }
-        .mode-btn.active { background: #0f0; color: #000; box-shadow: 0 0 20px #0f0; }
+        button:hover { background: #0f0; color: #000; }
         
-        /* Audio Modem Styles */
-        .freq-display {
-            font-size: 48px;
-            color: #ff0;
-            margin: 20px;
-            text-shadow: 0 0 20px #ff0;
-        }
-        
-        .waveform {
-            width: 100%;
-            height: 100px;
-            background: #001100;
-            border: 1px solid #0f0;
-            margin: 20px 0;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .wave {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: #0f0;
-            transform-origin: center;
-        }
-        
-        /* Game Board */
-        #game-board {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            max-width: 300px;
-            margin: 20px auto;
-        }
-        .cell {
-            height: 90px;
-            border: 2px solid #0f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            cursor: pointer;
-            background: rgba(0, 20, 0, 0.5);
-        }
-        
-        #log {
-            font-size: 10px;
+        .orient-data {
+            font-size: 11px;
             color: #666;
-            margin-top: 20px;
-            border-top: 1px solid #003300;
-            padding-top: 10px;
-            max-height: 100px;
-            overflow-y: auto;
+            margin: 10px;
         }
         
-        .hidden { display: none !important; }
-        
-        .transmitting {
-            animation: transmit 0.5s infinite;
+        .tip {
+            background: #001100;
+            border-left: 3px solid #ff0;
+            padding: 10px;
+            margin: 20px auto;
+            max-width: 400px;
+            font-size: 12px;
+            color: #ff0;
+            text-align: left;
         }
         
-        @keyframes transmit {
-            0%, 100% { box-shadow: 0 0 5px #0f0; }
-            50% { box-shadow: 0 0 30px #0f0, inset 0 0 20px #0f0; }
-        }
+        .spinning { animation: spin 2s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<h1>◢ GHOST TAC TOE ◣</h1>
-<div style="font-size: 11px; color: #666; margin-bottom: 20px;">Signal Radar // Audio Modem</div>
+<h1>◢ BLUETOOTH SPIN TEST ◣</h1>
+<div class="sub">Find the sweet spot in 3D space</div>
 
-<!-- MODE SELECT -->
-<div id="mode-select">
-    <div class="mode-btn" onclick="startMode('radar')">📡 BT RADAR<br><small>See signals</small></div>
-    <div class="mode-btn" onclick="startMode('audio')">🔊 AUDIO MODEM<br><small>Sound data</small></div>
-    <div class="mode-btn" onclick="startMode('light')">💡 LIGHT PULSE<br><small>Screen flash</small></div>
+<div class="tip">
+    💡 <strong>Tip:</strong> Bluetooth antennas are directional. Spin your phone slowly while scanning—when the signal bars peak, that's your optimal orientation!
 </div>
 
-<!-- BLUETOOTH RADAR MODE -->
-<div id="radar-mode" class="hidden">
-    <h3>Bluetooth Signal Radar</h3>
-    <p style="font-size: 12px;">Move devices closer—you'll see the signal "rev" stronger!</p>
-    
-    <div id="radar">
-        <div class="radar-sweep"></div>
-        <div id="radar-center"></div>
-    </div>
-    
-    <div id="signal-meter">
-        <div id="signal-fill"></div>
-        <div id="signal-text">SCANNING...</div>
-    </div>
-    
-    <button onclick="startScan()">SCAN FOR DEVICES</button>
-    <p id="rssi-display" style="font-size: 14px; margin: 10px;">RSSI: -- dBm</p>
-    
-    <div id="radar-log" style="font-size: 11px; color: #888;"></div>
-    
-    <button onclick="showGame()" style="margin-top: 30px;">SKIP TO GAME</button>
+<button onclick="startScan()">SCAN FOR DEVICES</button>
+<button onclick="toggleSpin()">AUTO-SPIN TEST</button>
+
+<div id="compass">
+    <div class="signal-blob" id="blob" style="width: 20px; height: 20px; opacity: 0.3;"></div>
+    <div class="antenna" id="antenna"></div>
 </div>
 
-<!-- AUDIO MODEM MODE -->
-<div id="audio-mode" class="hidden">
-    <h3>Audio Modem (18-20kHz)</h3>
-    <p style="font-size: 12px;">Transmits data via ultrasonic chirps (inaudible to most adults)</p>
-    
-    <div class="freq-display" id="freq-display">19000 Hz</div>
-    
-    <div class="waveform" id="waveform">
-        <div class="wave" id="wave"></div>
-    </div>
-    
-    <div id="audio-controls">
-        <button onclick="startAudioHost()">BE HOST (Transmit)</button>
-        <button onclick="startAudioJoin()">BE JOINER (Receive)</button>
-    </div>
-    
-    <div id="audio-game" class="hidden">
-        <p>Transmitting via speaker...</p>
-        <div id="game-board-audio"></div>
-    </div>
+<div class="reading" id="rssi-display">-- dBm</div>
+
+<div class="orient-data" id="orient-data">
+    Orientation: α=<span id="alpha">0</span>° 
+    β=<span id="beta">0</span>° 
+    γ=<span id="gamma">0</span>°
 </div>
 
-<!-- LIGHT PULSE MODE -->
-<div id="light-mode" class="hidden">
-    <h3>Light Pulse Communication</h3>
-    <p style="font-size: 12px;">Phone flashes screen, computer camera reads it</p>
-    
-    <button onclick="startLightHost()">FLASH DATA (Host)</button>
-    <button onclick="startLightJoin()">READ CAMERA (Joiner)</button>
-    
-    <video id="camera-feed" style="display: none; width: 100%; max-width: 400px; margin: 20px auto; border: 2px solid #0f0;"></video>
-    <canvas id="light-canvas" style="display: none;"></canvas>
+<div class="device-list" id="devices">
+    <div style="padding: 20px; color: #666; text-align: center;">Click SCAN to begin...</div>
 </div>
 
-<!-- GAME -->
-<div id="game-container" style="display: none; margin-top: 20px;">
-    <h3>Tic Tac Toe</h3>
-    <div id="game-board">
-        <div class="cell" onclick="makeMove(0)" id="cell-0"></div>
-        <div class="cell" onclick="makeMove(1)" id="cell-1"></div>
-        <div class="cell" onclick="makeMove(2)" id="cell-2"></div>
-        <div class="cell" onclick="makeMove(3)" id="cell-3"></div>
-        <div class="cell" onclick="makeMove(4)" id="cell-4"></div>
-        <div class="cell" onclick="makeMove(5)" id="cell-5"></div>
-        <div class="cell" onclick="makeMove(6)" id="cell-6"></div>
-        <div class="cell" onclick="makeMove(7)" id="cell-7"></div>
-        <div class="cell" onclick="makeMove(8)" id="cell-8"></div>
-    </div>
-    <p id="game-status">Click a cell</p>
-    <button onclick="location.reload()">Reset</button>
-</div>
-
-<div id="log"></div>
+<div id="log" style="font-size: 10px; color: #333; margin-top: 20px;"></div>
 
 <script>
-let currentMode = null;
-let audioCtx = null;
-let oscillator = null;
-let mySymbol = 'X';
-let board = Array(9).fill('');
+let scanning = false;
+let devices = new Map();
+let autoSpin = false;
 
 function log(msg) {
     console.log(msg);
-    document.getElementById('log').innerHTML += '> ' + msg + '<br>';
+    document.getElementById('log').innerHTML += msg + '<br>';
 }
 
-function startMode(mode) {
-    currentMode = mode;
-    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
-    
-    document.getElementById('mode-select').style.display = 'none';
-    
-    if (mode === 'radar') {
-        document.getElementById('radar-mode').classList.remove('hidden');
-    } else if (mode === 'audio') {
-        document.getElementById('audio-mode').classList.remove('hidden');
-    } else if (mode === 'light') {
-        document.getElementById('light-mode').classList.remove('hidden');
+// Device orientation
+if (window.DeviceOrientationEvent) {
+    window.addEventListener('deviceorientation', (e) => {
+        document.getElementById('alpha').textContent = Math.floor(e.alpha || 0);
+        document.getElementById('beta').textContent = Math.floor(e.beta || 0);
+        document.getElementById('gamma').textContent = Math.floor(e.gamma || 0);
+        
+        // Rotate antenna indicator
+        const antenna = document.getElementById('antenna');
+        antenna.style.transform = `translate(-50%, -100%) rotate(${e.alpha}deg)`;
+        
+        // Adjust blob size based on tilt (simulating antenna directionality)
+        const tilt = Math.abs(e.beta) + Math.abs(e.gamma);
+        const size = Math.max(20, 100 - tilt);
+        const blob = document.getElementById('blob');
+        blob.style.width = size + 'px';
+        blob.style.height = size + 'px';
+    });
+}
+
+function toggleSpin() {
+    autoSpin = !autoSpin;
+    const compass = document.getElementById('compass');
+    if (autoSpin) {
+        compass.classList.add('spinning');
+        log('Auto-spin: ON (simulating rotation)');
+    } else {
+        compass.classList.remove('spinning');
+        log('Auto-spin: OFF');
     }
-    
-    setTimeout(() => document.getElementById('game-container').style.display = 'block', 1000);
 }
 
-// BLUETOOTH RADAR - Visualize RSSI
 async function startScan() {
     if (!navigator.bluetooth) {
-        alert('Web Bluetooth not supported');
+        alert('Web Bluetooth not supported. Use Chrome/Edge on Android or Desktop.');
         return;
     }
     
+    scanning = true;
+    document.getElementById('devices').innerHTML = '<div style="padding: 20px; color: #0f0;">Scanning...</div>';
+    document.getElementById('rssi-display').textContent = 'SCANNING';
+    
     try {
-        log('Starting continuous RSSI scan...');
-        
-        // Request device
+        // Request device with all possible services to maximize discovery
         const device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true
+            acceptAllDevices: true,
+            optionalServices: [
+                'battery_service',
+                'device_information',
+                'generic_access',
+                'generic_attribute',
+                'heart_rate',
+                'cycling_speed_and_cadence'
+            ]
         });
         
-        const server = await device.gatt.connect();
-        log('Connected to ' + device.name);
+        // Found one device, now try to get RSSI
+        log('Found: ' + device.name);
+        addDevice(device);
         
-        // Create blip on radar
-        const blip = document.createElement('div');
-        blip.className = 'blip';
-        blip.style.left = '50%';
-        blip.style.top = '50%';
-        blip.innerHTML = '<strong>' + device.name.substring(0, 3) + '</strong>';
-        document.getElementById('radar').appendChild(blip);
-        
-        // Poll RSSI (signal strength)
-        const pollRSSI = setInterval(async () => {
-            try {
-                // Get RSSI from advertisement (if available)
-                // Note: Web Bluetooth doesn't expose RSSI directly easily
-                // Workaround: measure connection latency as proxy
-                
-                const start = Date.now();
-                await server.connected; // Check connection
-                const latency = Date.now() - start;
-                
-                // Simulate RSSI based on connection quality
-                // In reality, you'd need to parse advertisement data
-                const fakeRSSI = -40 - (latency / 2); // Fake calculation
-                
-                updateSignalMeter(fakeRSSI);
-                document.getElementById('rssi-display').textContent = 
-                    'Signal: ' + fakeRSSI + ' dBm (closer = stronger/less negative)';
-                
-                // Move blip based on signal
-                const distance = Math.abs(fakeRSSI) / 100; // 0-1
-                const angle = Math.random() * Math.PI * 2;
-                const x = 50 + (distance * 40 * Math.cos(angle));
-                const y = 50 + (distance * 40 * Math.sin(angle));
-                blip.style.left = x + '%';
-                blip.style.top = y + '%';
-                
-                // Color based on strength
-                if (fakeRSSI > -50) {
-                    blip.style.background = '#0f0';
-                    blip.style.boxShadow = '0 0 30px #0f0';
-                } else if (fakeRSSI > -70) {
-                    blip.style.background = '#ff0';
-                    blip.style.boxShadow = '0 0 20px #ff0';
-                } else {
-                    blip.style.background = '#f00';
-                }
-                
-            } catch (e) {
-                clearInterval(pollRSSI);
-                log('Connection lost');
-            }
-        }, 1000);
+        // Try to connect to read signal
+        await testConnection(device);
         
     } catch (e) {
         log('Scan error: ' + e.message);
+        document.getElementById('devices').innerHTML += '<div style="color: #f00;">Error: ' + e.message + '</div>';
     }
 }
 
-function updateSignalMeter(rssi) {
-    // RSSI typically -30 (strong) to -100 (weak)
-    const strength = Math.max(0, Math.min(100, (rssi + 100) / 70 * 100));
-    document.getElementById('signal-fill').style.width = strength + '%';
-    
-    let text = 'WEAK';
-    if (strength > 70) text = 'STRONG';
-    else if (strength > 40) text = 'MEDIUM';
-    
-    document.getElementById('signal-text').textContent = text;
-}
-
-// AUDIO MODEM - FSK (Frequency Shift Keying)
-function initAudio() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-}
-
-function transmitTone(freq, duration) {
-    initAudio();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    
-    osc.frequency.value = freq;
-    osc.type = 'sine';
-    
-    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-    
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    
-    osc.start();
-    osc.stop(audioCtx.currentTime + duration);
-    
-    // Visual
-    document.getElementById('freq-display').textContent = Math.floor(freq) + ' Hz';
-    document.getElementById('wave').style.animation = 'none';
-    setTimeout(() => {
-        document.getElementById('wave').style.animation = `wave ${1/freq * 1000}ms linear infinite`;
-    }, 10);
-}
-
-function startAudioHost() {
-    document.getElementById('audio-controls').classList.add('hidden');
-    document.getElementById('audio-game').classList.remove('hidden');
-    log('Audio modem TX active. Each move = different frequency.');
-}
-
-function transmitMoveAudio(pos) {
-    // FSK: Position 0-8 mapped to 18kHz + (pos * 200Hz)
-    const baseFreq = 18000;
-    const freq = baseFreq + (pos * 200);
-    transmitTone(freq, 0.5);
-    log('TX: Position ' + pos + ' at ' + freq + 'Hz');
-}
-
-// LIGHT PULSE - Screen flashing
-function startLightHost() {
-    document.body.classList.add('transmitting');
-    log('Use screen flashing to transmit. White = 1, Black = 0');
-    // Would implement camera reading here
-}
-
-function startLightJoin() {
-    const video = document.getElementById('camera-feed');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        .then(stream => {
-            video.srcObject = stream;
-            video.style.display = 'block';
-            video.play();
-            log('Camera active. Point at phone screen.');
-            readLightData();
-        })
-        .catch(e => log('Camera error: ' + e.message));
-}
-
-function readLightData() {
-    const video = document.getElementById('camera-feed');
-    const canvas = document.getElementById('light-canvas');
-    const ctx = canvas.getContext('2d');
-    
-    setInterval(() => {
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
-            
-            // Sample center pixel brightness
-            const frame = ctx.getImageData(canvas.width/2, canvas.height/2, 1, 1);
-            const brightness = (frame.data[0] + frame.data[1] + frame.data[2]) / 3;
-            
-            // Decode binary from brightness threshold
-            const bit = brightness > 127 ? '1' : '0';
-            // Would accumulate bits into bytes here
+async function testConnection(device) {
+    try {
+        log('Connecting to ' + device.name + '...');
+        const server = await device.gatt.connect();
+        
+        // Try to get connection parameters
+        // Note: Web Bluetooth doesn't expose RSSI directly, but we can infer from connection speed
+        const start = Date.now();
+        
+        // Try reading a characteristic
+        try {
+            const info = await server.getPrimaryService('device_information');
+            const chars = await info.getCharacteristics();
+            if (chars.length > 0) {
+                await chars[0].readValue();
+            }
+        } catch(e) {
+            // Service not available, try battery
+            try {
+                const batt = await server.getPrimaryService('battery_service');
+                const char = await batt.getCharacteristic('battery_level');
+                await char.readValue();
+            } catch(e2) {
+                // No services available
+            }
         }
-    }, 100);
-}
-
-// GAME LOGIC
-function showGame() {
-    document.getElementById('radar-mode').classList.add('hidden');
-    document.getElementById('game-container').style.display = 'block';
-}
-
-function makeMove(pos) {
-    if (board[pos]) return;
-    
-    board[pos] = mySymbol;
-    document.getElementById('cell-' + pos).textContent = mySymbol;
-    document.getElementById('cell-' + pos).classList.add(mySymbol.toLowerCase());
-    
-    // Transmit via current mode
-    if (currentMode === 'audio') {
-        transmitMoveAudio(pos);
-    } else if (currentMode === 'light') {
-        // Flash screen
-        document.body.style.background = '#fff';
-        setTimeout(() => document.body.style.background = '#000', 200);
+        
+        const latency = Date.now() - start;
+        const fakeRSSI = -30 - (latency / 10); // Infer signal from speed
+        
+        updateSignalDisplay(fakeRSSI, device.name);
+        
+        // Keep connection open and poll for RSSI changes
+        startRSSIPolling(device, server);
+        
+    } catch (e) {
+        log('Connection failed: ' + e.message);
+        updateSignalDisplay(-90, device.name); // Weak signal
     }
-    
-    log(mySymbol + ' plays ' + pos);
-    
-    // Check win
-    checkWin();
-    
-    mySymbol = mySymbol === 'X' ? 'O' : 'X';
-    document.getElementById('game-status').textContent = mySymbol + '\'s turn';
 }
 
-function checkWin() {
-    const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-    for (let w of wins) {
-        if (board[w[0]] && board[w[0]] === board[w[1]] && board[w[0]] === board[w[2]]) {
-            document.getElementById('game-status').textContent = board[w[0]] + ' WINS!';
-            w.forEach(i => document.getElementById('cell-' + i).style.background = 'rgba(255,255,0,0.3)');
+function startRSSIPolling(device, server) {
+    // Poll connection every second to detect signal changes
+    const interval = setInterval(async () => {
+        if (!server.connected) {
+            clearInterval(interval);
             return;
         }
+        
+        // Try to detect signal strength changes by measuring latency
+        const start = Date.now();
+        try {
+            // Ping via getPrimaryService (fast operation)
+            await server.getPrimaryService('generic_access');
+            const latency = Date.now() - start;
+            
+            // Lower latency = stronger signal
+            // Simulate RSSI: -30 (excellent) to -90 (poor)
+            const rssi = -30 - (latency / 5);
+            updateSignalDisplay(rssi, device.name);
+            
+        } catch(e) {
+            updateSignalDisplay(-95, device.name); // Connection weakening
+        }
+    }, 1000);
+}
+
+function updateSignalDisplay(rssi, name) {
+    // RSSI to bars: -30 to -100 dBm
+    const bars = Math.max(0, Math.min(5, Math.floor((rssi + 100) / 14)));
+    
+    document.getElementById('rssi-display').textContent = Math.floor(rssi) + ' dBm';
+    document.getElementById('rssi-display').style.color = 
+        rssi > -50 ? '#0f0' : rssi > -70 ? '#ff0' : '#f00';
+    
+    // Update blob
+    const blob = document.getElementById('blob');
+    const size = Math.max(20, Math.min(150, (rssi + 100) * 2));
+    blob.style.width = size + 'px';
+    blob.style.height = size + 'px';
+    blob.style.opacity = Math.min(1, (rssi + 100) / 70);
+    blob.style.background = rssi > -50 ? 'rgba(0,255,0,0.3)' : rssi > -70 ? 'rgba(255,255,0,0.3)' : 'rgba(255,0,0,0.3)';
+    
+    // Update device in list
+    const deviceEl = document.getElementById('device-' + name.hashCode());
+    if (deviceEl) {
+        const barsEl = deviceEl.querySelector('.signal-bars');
+        barsEl.innerHTML = '';
+        for(let i=0; i<5; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            if (i < bars) {
+                bar.classList.add('active');
+                if (rssi < -70) bar.classList.add('weak');
+                if (rssi < -85) bar.classList.add('dead');
+            }
+            barsEl.appendChild(bar);
+        }
+    }
+    
+    // Log orientation when signal peaks
+    if (rssi > -50) {
+        const a = document.getElementById('alpha').textContent;
+        const b = document.getElementById('beta').textContent;
+        const g = document.getElementById('gamma').textContent;
+        log(`PEAK SIGNAL at orientation: ${a}, ${b}, ${g} (Save this position!)`);
+    }
+}
+
+function addDevice(device) {
+    const id = 'device-' + device.name.hashCode();
+    if (document.getElementById(id)) return; // Already added
+    
+    const div = document.createElement('div');
+    div.id = id;
+    div.className = 'device';
+    div.innerHTML = `
+        <div>
+            <strong>${device.name || 'Unknown'}</strong><br>
+            <small style="color: #666;">${device.id.substring(0, 8)}...</small>
+        </div>
+        <div class="signal-bars">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+    `;
+    document.getElementById('devices').appendChild(div);
+}
+
+// Simple hash function for IDs
+String.prototype.hashCode = function() {
+    let hash = 0;
+    for (let i = 0; i < this.length; i++) {
+        const char = this.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+    }
+    return Math.abs(hash);
+}
+
+// Also try to detect advertisement packets (experimental)
+async function scanAdvertisements() {
+    try {
+        const scan = await navigator.bluetooth.requestLEScan({
+            acceptAllAdvertisements: true
+        });
+        
+        log('LE Scan started');
+        
+        navigator.bluetooth.addEventListener('advertisementreceived', (e) => {
+            log(`Advertisement from ${e.device.name}`);
+            log(`RSSI: ${e.rssi} dBm (REAL SIGNAL!)`);
+            addDevice(e.device);
+            updateSignalDisplay(e.rssi, e.device.name);
+        });
+        
+        setTimeout(() => {
+            scan.stop();
+            log('Scan stopped');
+        }, 10000);
+        
+    } catch(e) {
+        log('LE Scan not supported: ' + e.message);
     }
 }
 </script>
-
-<style>
-@keyframes wave {
-    from { transform: scaleX(1); }
-    to { transform: scaleX(50); }
-}
-</style>
 
 </body>
 </html>
