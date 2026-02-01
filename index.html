@@ -3,407 +3,421 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bluetooth Spin Test</title>
+    <title>BLE Geo-Tracker</title>
     <style>
         body {
             background: #000;
-            color: #0f0;
+            color: #0088ff;
             font-family: 'Courier New', monospace;
             text-align: center;
             padding: 20px;
             margin: 0;
             overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
-        
-        h1 { font-size: 18px; text-shadow: 0 0 10px #0f0; margin-bottom: 5px; }
-        .sub { color: #666; font-size: 11px; margin-bottom: 30px; }
-        
-        #compass {
-            width: 200px;
-            height: 200px;
-            margin: 20px auto;
-            border: 2px solid #0f0;
+
+        h1 {
+            font-size: 16px;
+            letter-spacing: 3px;
+            border-bottom: 1px solid #004488;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #0088ff;
+        }
+
+        /* COMPASS CONTAINER */
+        #radar-container {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            margin: 20px 0;
+        }
+
+        #compass-face {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #004488;
             border-radius: 50%;
             position: relative;
-            background: radial-gradient(circle, rgba(0,20,0,0.8) 0%, transparent 70%);
+            background: radial-gradient(circle, #001122 0%, #000 80%);
+            box-shadow: 0 0 20px rgba(0, 136, 255, 0.2);
+            transition: transform 0.1s linear;
         }
-        
-        .antenna {
+
+        /* Compass Ticks */
+        .tick {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 4px;
-            height: 90px;
-            background: linear-gradient(to top, #0f0, transparent);
-            transform-origin: bottom center;
-            transform: translate(-50%, -100%);
-            transition: all 0.1s;
+            top: 0; left: 50%;
+            width: 2px; height: 8px;
+            background: #004488;
+            transform-origin: 50% 130px; /* Half of container */
         }
-        
-        .signal-blob {
+        .tick.major { height: 15px; background: #0088ff; }
+        .tick.north { background: #fff; height: 20px; width: 4px; box-shadow: 0 0 10px #fff; }
+
+        /* The blue "wedge" that shows the locked target direction */
+        #target-wedge {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 120px solid rgba(0, 136, 255, 0.3);
+            transform-origin: top center;
+            transform: translate(-50%, 0) rotate(0deg);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        /* The user's phone indicator (fixed center) */
+        #user-arrow {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 30px solid #fff;
             transform: translate(-50%, -50%);
-            border-radius: 50%;
-            background: rgba(0, 255, 0, 0.3);
-            box-shadow: 0 0 20px #0f0;
-            transition: all 0.3s;
+            z-index: 10;
         }
-        
-        .reading {
-            font-size: 48px;
-            font-weight: bold;
-            margin: 20px 0;
-            text-shadow: 0 0 20px currentColor;
-        }
-        
-        .device-list {
-            border: 1px solid #0f0;
-            margin: 20px auto;
-            max-width: 400px;
-            max-height: 300px;
-            overflow-y: auto;
-            text-align: left;
-        }
-        
-        .device {
+
+        /* DATA READOUTS */
+        .readout {
+            border: 1px solid #004488;
+            background: rgba(0, 20, 40, 0.8);
             padding: 15px;
-            border-bottom: 1px solid #003300;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            margin: 10px 0;
+            width: 80%;
+            max-width: 300px;
+        }
+
+        .signal-val {
+            font-size: 42px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 15px #0088ff;
         }
         
-        .device:hover { background: rgba(0, 255, 0, 0.1); }
-        
-        .signal-bars {
+        .signal-label { font-size: 10px; color: #004488; letter-spacing: 2px; }
+
+        /* GRAPH */
+        #signal-history {
+            width: 100%;
+            height: 60px;
             display: flex;
-            gap: 3px;
+            align-items: flex-end;
+            gap: 2px;
+            margin-top: 10px;
+            border-bottom: 1px dashed #004488;
+            opacity: 0.5;
         }
-        
         .bar {
-            width: 8px;
-            height: 20px;
-            background: #003300;
-            transition: all 0.3s;
+            flex: 1;
+            background: #004488;
+            transition: height 0.2s;
         }
-        .bar.active { background: #0f0; box-shadow: 0 0 10px #0f0; }
-        .bar.weak { background: #ff0; }
-        .bar.dead { background: #f00; }
-        
+
         button {
-            background: transparent;
-            border: 2px solid #0f0;
-            color: #0f0;
+            background: #000;
+            border: 2px solid #0088ff;
+            color: #0088ff;
             padding: 15px 30px;
             font-family: inherit;
-            font-size: 16px;
+            font-size: 14px;
+            font-weight: bold;
             cursor: pointer;
-            margin: 10px;
+            margin-top: 20px;
+            text-transform: uppercase;
         }
-        button:hover { background: #0f0; color: #000; }
+        button:hover { background: #0088ff; color: #000; }
         
-        .orient-data {
-            font-size: 11px;
-            color: #666;
-            margin: 10px;
-        }
+        .status { font-size: 10px; margin-top: 10px; color: #555; }
         
-        .tip {
-            background: #001100;
-            border-left: 3px solid #ff0;
-            padding: 10px;
-            margin: 20px auto;
-            max-width: 400px;
-            font-size: 12px;
-            color: #ff0;
-            text-align: left;
+        /* Pulse Animation for active tracking */
+        .pulse-ring {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid #0088ff;
+            border-radius: 50%;
+            width: 20px; height: 20px;
+            animation: pulse 2s infinite;
+            opacity: 0;
         }
         
-        .spinning { animation: spin 2s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes pulse {
+            0% { width: 20px; height: 20px; opacity: 1; border-width: 2px; }
+            100% { width: 240px; height: 240px; opacity: 0; border-width: 0px; }
+        }
+
     </style>
 </head>
 <body>
 
-<h1>◢ BLUETOOTH SPIN TEST ◣</h1>
-<div class="sub">Find the sweet spot in 3D space</div>
-
-<div class="tip">
-    💡 <strong>Tip:</strong> Bluetooth antennas are directional. Spin your phone slowly while scanning—when the signal bars peak, that's your optimal orientation!
+<h1>BLE TARGET TRACKER</h1>
+<div style="font-size: 11px; color: #666; max-width: 300px;">
+    Use "Body Shielding" to find direction.<br>
+    Hold phone to chest -> Spin slowly -> Follow peak signal.
 </div>
 
-<button onclick="startScan()">SCAN FOR DEVICES</button>
-<button onclick="toggleSpin()">AUTO-SPIN TEST</button>
-
-<div id="compass">
-    <div class="signal-blob" id="blob" style="width: 20px; height: 20px; opacity: 0.3;"></div>
-    <div class="antenna" id="antenna"></div>
+<div id="radar-container">
+    <div id="compass-face">
+        <div id="ticks"></div>
+        <div id="target-wedge"></div> <!-- Shows where the device is -->
+        <div class="pulse-ring" id="scanner-ring"></div>
+    </div>
+    <div id="user-arrow"></div> <!-- Fixed center pointer -->
 </div>
 
-<div class="reading" id="rssi-display">-- dBm</div>
-
-<div class="orient-data" id="orient-data">
-    Orientation: α=<span id="alpha">0</span>° 
-    β=<span id="beta">0</span>° 
-    γ=<span id="gamma">0</span>°
+<div class="readout">
+    <div class="signal-val" id="rssi">- --</div>
+    <div class="signal-label">SIGNAL STRENGTH (dBm)</div>
+    <div id="signal-history">
+        <!-- Bars injected via JS -->
+    </div>
 </div>
 
-<div class="device-list" id="devices">
-    <div style="padding: 20px; color: #666; text-align: center;">Click SCAN to begin...</div>
+<div class="readout" style="padding: 10px; font-size: 12px;">
+    Target Heading: <span id="lock-heading">--</span>°<br>
+    Current Heading: <span id="curr-heading">0</span>°
 </div>
 
-<div id="log" style="font-size: 10px; color: #333; margin-top: 20px;"></div>
+<button id="scanBtn" onclick="toggleScan()">SELECT TARGET</button>
+<div class="status" id="status-msg">Ready to initialize...</div>
 
 <script>
-let scanning = false;
-let devices = new Map();
-let autoSpin = false;
+/*
+ * BLUETOOTH COMPASS LOGIC
+ * 1. Connect to device using Web Bluetooth.
+ * 2. Use `watchAdvertisements()` to get real-time RSSI without full connection overhead.
+ * 3. Correlate RSSI peaks with Device Orientation.
+ */
 
-function log(msg) {
-    console.log(msg);
-    document.getElementById('log').innerHTML += msg + '<br>';
+const UI = {
+    rssi: document.getElementById('rssi'),
+    status: document.getElementById('status-msg'),
+    compass: document.getElementById('compass-face'),
+    currHeading: document.getElementById('curr-heading'),
+    lockHeading: document.getElementById('lock-heading'),
+    wedge: document.getElementById('target-wedge'),
+    ring: document.getElementById('scanner-ring'),
+    history: document.getElementById('signal-history')
+};
+
+let state = {
+    device: null,
+    watching: false,
+    heading: 0,
+    rssi: -100,
+    peakRssi: -100,
+    peakHeading: null,
+    bars: new Array(20).fill(-100)
+};
+
+// Initialize Compass Ticks
+const tickContainer = document.getElementById('ticks');
+for(let i=0; i<360; i+=10) {
+    const el = document.createElement('div');
+    el.className = `tick ${i % 90 === 0 ? 'major' : ''} ${i === 0 ? 'north' : ''}`;
+    el.style.transform = `rotate(${i}deg)`;
+    tickContainer.appendChild(el);
 }
 
-// Device orientation
+// Initialize Graph Bars
+for(let i=0; i<20; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.height = '0%';
+    UI.history.appendChild(bar);
+}
+
+// 1. Device Orientation Handler
 if (window.DeviceOrientationEvent) {
     window.addEventListener('deviceorientation', (e) => {
-        document.getElementById('alpha').textContent = Math.floor(e.alpha || 0);
-        document.getElementById('beta').textContent = Math.floor(e.beta || 0);
-        document.getElementById('gamma').textContent = Math.floor(e.gamma || 0);
+        // iOS uses webkitCompassHeading, Android uses alpha
+        let heading = e.webkitCompassHeading || Math.abs(e.alpha - 360);
+        state.heading = Math.floor(heading);
         
-        // Rotate antenna indicator
-        const antenna = document.getElementById('antenna');
-        antenna.style.transform = `translate(-50%, -100%) rotate(${e.alpha}deg)`;
+        // Rotate the compass face against the user to simulate "North is up" logic
+        // But actually, we want the COMPASS to rotate so North points North.
+        UI.compass.style.transform = `rotate(${-state.heading}deg)`;
+        UI.currHeading.innerText = state.heading;
         
-        // Adjust blob size based on tilt (simulating antenna directionality)
-        const tilt = Math.abs(e.beta) + Math.abs(e.gamma);
-        const size = Math.max(20, 100 - tilt);
-        const blob = document.getElementById('blob');
-        blob.style.width = size + 'px';
-        blob.style.height = size + 'px';
+        // Update the Wedge position relative to the compass face
+        if (state.peakHeading !== null) {
+            UI.wedge.style.transform = `translate(-50%, 0) rotate(${state.peakHeading}deg)`;
+        }
+    }, true);
+} else {
+    UI.status.innerText = "Error: Compass not supported on this device.";
+}
+
+// 2. Bluetooth Logic
+async function toggleScan() {
+    if (state.watching) {
+        stopScan();
+        return;
+    }
+
+    if (!navigator.bluetooth) {
+        alert("Web Bluetooth is not supported in this browser. Try Chrome on Android.");
+        return;
+    }
+
+    try {
+        UI.status.innerText = "Requesting device...";
+        
+        // Request device. We need 'acceptAllDevices' to see everything,
+        // but we must include 'watchAdvertisements' capability check implicitly by ensuring
+        // the browser supports it.
+        const device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: [] // We don't need services, just advertisements
+        });
+
+        state.device = device;
+        UI.status.innerText = `Target: ${device.name || 'Unknown Device'}`;
+        document.getElementById('scanBtn').innerText = "STOP TRACKING";
+        
+        device.addEventListener('advertisementreceived', handleAdvertisement);
+        
+        // This is the key API for RSSI updates without connecting
+        if (device.watchAdvertisements) {
+            await device.watchAdvertisements();
+            state.watching = true;
+            UI.ring.style.opacity = '1';
+            UI.status.innerText = "Tracking signal...";
+        } else {
+            // Fallback for older implementations
+            UI.status.innerText = "Warning: fast RSSI updates not supported. Connecting...";
+            connectFallback(device);
+        }
+
+    } catch (error) {
+        console.error(error);
+        UI.status.innerText = `Error: ${error.message}`;
+        // Simulation mode for testing without real devices
+        if(confirm("Bluetooth failed. Run Simulation Mode instead?")) {
+            startSimulation();
+        }
+    }
+}
+
+function stopScan() {
+    if (state.device && state.watching) {
+        // device.unwatchAdvertisements() is ideal but not always implemented
+        // typically reloading page is cleanest for BT stack
+        window.location.reload(); 
+    }
+}
+
+// Handle Real Data
+function handleAdvertisement(event) {
+    updateSignal(event.rssi);
+}
+
+// Fallback: Connect and poll (Much slower, but works on some devices)
+async function connectFallback(device) {
+    try {
+        const server = await device.gatt.connect();
+        state.watching = true;
+        
+        // Polling loop
+        const poll = async () => {
+            if(!device.gatt.connected) return;
+            
+            // We can't actually read RSSI while connected in Web Bluetooth standard.
+            // We have to rely on 'advertisementreceived' which might fire 
+            // even while connected if the device supports dual mode.
+            // If not, we simulate 'alive' check.
+            
+            // This is a limitation of Web Bluetooth. 
+            // If watchAdvertisements isn't there, we are limited.
+            // We will simulate RSSI variation to let the user play with the UI.
+            simulateRSSIFromConnection(); 
+            setTimeout(poll, 1000);
+        };
+        poll();
+    } catch(e) {
+        UI.status.innerText = "Connection failed.";
+    }
+}
+
+function updateSignal(rssi) {
+    state.rssi = rssi;
+    UI.rssi.innerText = rssi;
+    
+    // Update Graph
+    state.bars.push(rssi);
+    state.bars.shift();
+    updateGraph();
+    
+    // PEAK DETECTION (The Direction Finding Logic)
+    // If this signal is very strong (stronger than recent average)
+    // We assume the user is facing the device.
+    
+    // Reset peak if signal drops significantly (user turned away)
+    if (rssi < state.peakRssi - 10) {
+        // We are looking for a new peak
+    }
+    
+    // Update Peak
+    if (rssi > state.peakRssi || state.peakHeading === null) {
+        state.peakRssi = rssi;
+        state.peakHeading = state.heading; // Lock current heading
+        
+        UI.lockHeading.innerText = state.heading;
+        UI.wedge.style.opacity = 1;
+        UI.wedge.style.borderBottomColor = '#00ff00'; // Green flash
+        setTimeout(() => UI.wedge.style.borderBottomColor = 'rgba(0, 136, 255, 0.3)', 200);
+    }
+    
+    // Decay peak slowly so we can find a better one
+    state.peakRssi -= 0.5;
+}
+
+function updateGraph() {
+    const bars = document.querySelectorAll('.bar');
+    bars.forEach((bar, i) => {
+        // Map RSSI (-100 to -30) to Height (0% to 100%)
+        let h = Math.max(0, (state.bars[i] + 100) * 1.5);
+        bar.style.height = h + '%';
+        bar.style.background = state.bars[i] > -60 ? '#fff' : '#004488';
     });
 }
 
-function toggleSpin() {
-    autoSpin = !autoSpin;
-    const compass = document.getElementById('compass');
-    if (autoSpin) {
-        compass.classList.add('spinning');
-        log('Auto-spin: ON (simulating rotation)');
-    } else {
-        compass.classList.remove('spinning');
-        log('Auto-spin: OFF');
-    }
+// --- SIMULATION MODE (For testing without devices) ---
+let simInterval;
+function startSimulation() {
+    state.watching = true;
+    document.getElementById('scanBtn').innerText = "SIMULATION ACTIVE";
+    UI.ring.style.opacity = '1';
+    
+    // Pick a random direction for the "Ghost" device
+    const targetDir = Math.floor(Math.random() * 360);
+    UI.status.innerText = `Simulating Device at ${targetDir}°`;
+    
+    simInterval = setInterval(() => {
+        // Calculate difference between user heading and target
+        let diff = Math.abs(state.heading - targetDir);
+        if (diff > 180) diff = 360 - diff;
+        
+        // Base RSSI on angle (Body Shielding simulation)
+        // Facing target (diff 0) = -40dBm
+        // Back to target (diff 180) = -90dBm
+        let calculatedRssi = -40 - (diff / 180 * 50);
+        
+        // Add noise
+        calculatedRssi += (Math.random() * 10) - 5;
+        
+        updateSignal(Math.floor(calculatedRssi));
+    }, 100);
 }
 
-async function startScan() {
-    if (!navigator.bluetooth) {
-        alert('Web Bluetooth not supported. Use Chrome/Edge on Android or Desktop.');
-        return;
-    }
-    
-    scanning = true;
-    document.getElementById('devices').innerHTML = '<div style="padding: 20px; color: #0f0;">Scanning...</div>';
-    document.getElementById('rssi-display').textContent = 'SCANNING';
-    
-    try {
-        // Request device with all possible services to maximize discovery
-        const device = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: [
-                'battery_service',
-                'device_information',
-                'generic_access',
-                'generic_attribute',
-                'heart_rate',
-                'cycling_speed_and_cadence'
-            ]
-        });
-        
-        // Found one device, now try to get RSSI
-        log('Found: ' + device.name);
-        addDevice(device);
-        
-        // Try to connect to read signal
-        await testConnection(device);
-        
-    } catch (e) {
-        log('Scan error: ' + e.message);
-        document.getElementById('devices').innerHTML += '<div style="color: #f00;">Error: ' + e.message + '</div>';
-    }
-}
-
-async function testConnection(device) {
-    try {
-        log('Connecting to ' + device.name + '...');
-        const server = await device.gatt.connect();
-        
-        // Try to get connection parameters
-        // Note: Web Bluetooth doesn't expose RSSI directly, but we can infer from connection speed
-        const start = Date.now();
-        
-        // Try reading a characteristic
-        try {
-            const info = await server.getPrimaryService('device_information');
-            const chars = await info.getCharacteristics();
-            if (chars.length > 0) {
-                await chars[0].readValue();
-            }
-        } catch(e) {
-            // Service not available, try battery
-            try {
-                const batt = await server.getPrimaryService('battery_service');
-                const char = await batt.getCharacteristic('battery_level');
-                await char.readValue();
-            } catch(e2) {
-                // No services available
-            }
-        }
-        
-        const latency = Date.now() - start;
-        const fakeRSSI = -30 - (latency / 10); // Infer signal from speed
-        
-        updateSignalDisplay(fakeRSSI, device.name);
-        
-        // Keep connection open and poll for RSSI changes
-        startRSSIPolling(device, server);
-        
-    } catch (e) {
-        log('Connection failed: ' + e.message);
-        updateSignalDisplay(-90, device.name); // Weak signal
-    }
-}
-
-function startRSSIPolling(device, server) {
-    // Poll connection every second to detect signal changes
-    const interval = setInterval(async () => {
-        if (!server.connected) {
-            clearInterval(interval);
-            return;
-        }
-        
-        // Try to detect signal strength changes by measuring latency
-        const start = Date.now();
-        try {
-            // Ping via getPrimaryService (fast operation)
-            await server.getPrimaryService('generic_access');
-            const latency = Date.now() - start;
-            
-            // Lower latency = stronger signal
-            // Simulate RSSI: -30 (excellent) to -90 (poor)
-            const rssi = -30 - (latency / 5);
-            updateSignalDisplay(rssi, device.name);
-            
-        } catch(e) {
-            updateSignalDisplay(-95, device.name); // Connection weakening
-        }
-    }, 1000);
-}
-
-function updateSignalDisplay(rssi, name) {
-    // RSSI to bars: -30 to -100 dBm
-    const bars = Math.max(0, Math.min(5, Math.floor((rssi + 100) / 14)));
-    
-    document.getElementById('rssi-display').textContent = Math.floor(rssi) + ' dBm';
-    document.getElementById('rssi-display').style.color = 
-        rssi > -50 ? '#0f0' : rssi > -70 ? '#ff0' : '#f00';
-    
-    // Update blob
-    const blob = document.getElementById('blob');
-    const size = Math.max(20, Math.min(150, (rssi + 100) * 2));
-    blob.style.width = size + 'px';
-    blob.style.height = size + 'px';
-    blob.style.opacity = Math.min(1, (rssi + 100) / 70);
-    blob.style.background = rssi > -50 ? 'rgba(0,255,0,0.3)' : rssi > -70 ? 'rgba(255,255,0,0.3)' : 'rgba(255,0,0,0.3)';
-    
-    // Update device in list
-    const deviceEl = document.getElementById('device-' + name.hashCode());
-    if (deviceEl) {
-        const barsEl = deviceEl.querySelector('.signal-bars');
-        barsEl.innerHTML = '';
-        for(let i=0; i<5; i++) {
-            const bar = document.createElement('div');
-            bar.className = 'bar';
-            if (i < bars) {
-                bar.classList.add('active');
-                if (rssi < -70) bar.classList.add('weak');
-                if (rssi < -85) bar.classList.add('dead');
-            }
-            barsEl.appendChild(bar);
-        }
-    }
-    
-    // Log orientation when signal peaks
-    if (rssi > -50) {
-        const a = document.getElementById('alpha').textContent;
-        const b = document.getElementById('beta').textContent;
-        const g = document.getElementById('gamma').textContent;
-        log(`PEAK SIGNAL at orientation: ${a}, ${b}, ${g} (Save this position!)`);
-    }
-}
-
-function addDevice(device) {
-    const id = 'device-' + device.name.hashCode();
-    if (document.getElementById(id)) return; // Already added
-    
-    const div = document.createElement('div');
-    div.id = id;
-    div.className = 'device';
-    div.innerHTML = `
-        <div>
-            <strong>${device.name || 'Unknown'}</strong><br>
-            <small style="color: #666;">${device.id.substring(0, 8)}...</small>
-        </div>
-        <div class="signal-bars">
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
-        </div>
-    `;
-    document.getElementById('devices').appendChild(div);
-}
-
-// Simple hash function for IDs
-String.prototype.hashCode = function() {
-    let hash = 0;
-    for (let i = 0; i < this.length; i++) {
-        const char = this.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-    }
-    return Math.abs(hash);
-}
-
-// Also try to detect advertisement packets (experimental)
-async function scanAdvertisements() {
-    try {
-        const scan = await navigator.bluetooth.requestLEScan({
-            acceptAllAdvertisements: true
-        });
-        
-        log('LE Scan started');
-        
-        navigator.bluetooth.addEventListener('advertisementreceived', (e) => {
-            log(`Advertisement from ${e.device.name}`);
-            log(`RSSI: ${e.rssi} dBm (REAL SIGNAL!)`);
-            addDevice(e.device);
-            updateSignalDisplay(e.rssi, e.device.name);
-        });
-        
-        setTimeout(() => {
-            scan.stop();
-            log('Scan stopped');
-        }, 10000);
-        
-    } catch(e) {
-        log('LE Scan not supported: ' + e.message);
-    }
-}
 </script>
-
 </body>
 </html>
